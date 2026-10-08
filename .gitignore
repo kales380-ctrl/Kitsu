@@ -2,6 +2,7 @@
 *.pdb
 bin/
 obj/
+artifacts/
 .vs/
 smoke-test.txt
 kitsu-error.txt

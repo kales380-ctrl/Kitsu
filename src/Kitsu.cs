@@ -14,6 +14,8 @@ namespace KitsuDesktop {
         public float X,Y,VX,VY;
         public bool Dragging,Held;
         public ToyKind Kind=ToyKind.Ball;
+        [System.ComponentModel.Browsable(false)]
+        [System.ComponentModel.DesignerSerializationVisibility(System.ComponentModel.DesignerSerializationVisibility.Hidden)]
         public bool Bone { get { return Kind==ToyKind.Bone; } set { Kind=value ? ToyKind.Bone : ToyKind.Ball; } }
         Point grab;
         Point previous;
@@ -326,7 +328,7 @@ namespace KitsuDesktop {
             double wall=clock.Elapsed.TotalSeconds,dt=Math.Max(0,Math.Min(.05,wall-last)); last=wall;
             if(stopSignal.WaitOne(0)) { Close(); return; }
             ticks++;
-            if(smoke && wall>3) { File.WriteAllText(Path.Combine(AppDomain.CurrentDomain.BaseDirectory,"smoke-test.txt"),"PASS: "+ticks+" timer frames; per-pixel window rendered without errors."); Close(); return; }
+            if(smoke && wall>3) { Program.WriteSmokeResult("PASS: "+ticks+" timer frames; per-pixel window rendered without errors."); Close(); return; }
             // One logical clock drives both poses and movement. Pausing or a busy UI
             // cannot skip a gait, the crouch before a jump, or the roll onto her back.
             if(paused || dragging || menu.Visible) { Render(); return; }
@@ -425,12 +427,25 @@ namespace KitsuDesktop {
     }
 
     static class Program {
+        static int fatalReported;
         [STAThread] static void Main(string[] args) {
-            try { Run(args); }
-            catch(Exception ex) { File.WriteAllText(Path.Combine(AppDomain.CurrentDomain.BaseDirectory,"kitsu-error.txt"),ex.ToString(),Encoding.UTF8); Environment.ExitCode=1; }
+            bool diagnostics=args.Length>0 && args[0].StartsWith("--",StringComparison.Ordinal);
+            try {
+                // Keep the original overlay's coordinate system and bitmap sizes.
+                // WinForms automatic DPI scaling would also scale the forms while
+                // the renderer still supplies explicitly sized layered bitmaps.
+                Application.SetHighDpiMode(HighDpiMode.DpiUnaware);
+                Application.EnableVisualStyles(); Application.SetCompatibleTextRenderingDefault(false);
+                Application.SetUnhandledExceptionMode(UnhandledExceptionMode.CatchException);
+                Application.ThreadException+=delegate(object sender,System.Threading.ThreadExceptionEventArgs e) { ReportFatal(e.Exception,diagnostics); Application.Exit(); };
+                AppDomain.CurrentDomain.UnhandledException+=delegate(object sender,UnhandledExceptionEventArgs e) {
+                    ReportFatal(e.ExceptionObject as Exception ?? new Exception(Convert.ToString(e.ExceptionObject)),diagnostics);
+                };
+                Run(args);
+            }
+            catch(Exception ex) { ReportFatal(ex,diagnostics); }
         }
         static void Run(string[] args) {
-            Application.EnableVisualStyles(); Application.SetCompatibleTextRenderingDefault(false);
             if(args.Length>0 && args[0]=="--preview") { Preview(args.Length>1 ? args[1] : "kitsu-preview.png"); return; }
             if(args.Length>0 && args[0]=="--sequence-preview") { PixelDog.SequencePreview(args.Length>1 ? args[1] : "kitsu-sequences.png"); return; }
             if(args.Length>0 && args[0]=="--commands-preview") { PixelDog.CommandsPreview(args.Length>1 ? args[1] : "kitsu-commands-v4.png"); return; }
@@ -439,9 +454,50 @@ namespace KitsuDesktop {
             if(args.Length>0 && args[0]=="--smoke-test") { Application.Run(new PetForm(true)); return; }
             bool first; using(var mutex=new System.Threading.Mutex(true,"Local\\KitsuDesktopPet_v1",out first)) {
                 if(!first) { MessageBox.Show("Кицу уже гуляет по рабочему столу. Её меню есть рядом с часами.","Кицу"); return; }
-                Application.ThreadException+=delegate(object sender,System.Threading.ThreadExceptionEventArgs e) { File.WriteAllText(Path.Combine(AppDomain.CurrentDomain.BaseDirectory,"kitsu-error.txt"),e.Exception.ToString(),Encoding.UTF8); Application.Exit(); };
-                Application.Run(new PetForm(args.Length>0 && args[0]=="--smoke-test"));
+                Application.Run(new PetForm());
             }
+        }
+        static string DiagnosticsDirectory {
+            get { return Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),"Kitsu"); }
+        }
+        static bool TryWriteDiagnostic(string path,string text) {
+            try {
+                string directory=Path.GetDirectoryName(path);
+                if(!String.IsNullOrEmpty(directory)) Directory.CreateDirectory(directory);
+                File.WriteAllText(path,text,new UTF8Encoding(false)); return true;
+            }
+            catch { return false; }
+        }
+        internal static void WriteSmokeResult(string result) {
+            // Existing command-line checks expect this file next to the executable.
+            // A read-only application directory must still allow a completed check.
+            if(TryWriteDiagnostic(Path.Combine(AppDomain.CurrentDomain.BaseDirectory,"smoke-test.txt"),result)) return;
+            if(TryWriteDiagnostic(Path.Combine(DiagnosticsDirectory,"smoke-test.txt"),result)) return;
+            throw new IOException("Не удалось сохранить результат проверки запуска Кицу.");
+        }
+        static void ReportFatal(Exception error,bool diagnostics) {
+            Environment.ExitCode=1;
+            if(System.Threading.Interlocked.Exchange(ref fatalReported,1)!=0) return;
+            string details="Kitsu startup/runtime error\r\n"+DateTimeOffset.Now.ToString("O")+"\r\n"+
+                System.Runtime.InteropServices.RuntimeInformation.FrameworkDescription+"\r\n"+
+                Environment.OSVersion+"; "+System.Runtime.InteropServices.RuntimeInformation.ProcessArchitecture+"\r\n\r\n"+error;
+            string log=Path.Combine(DiagnosticsDirectory,"kitsu-error.txt");
+            if(!TryWriteDiagnostic(log,details)) {
+                log=Path.Combine(Path.GetTempPath(),"Kitsu","kitsu-error.txt");
+                if(!TryWriteDiagnostic(log,details)) log=null;
+            }
+            if(diagnostics) {
+                // Keep automation compatible while primary logs live in a folder
+                // writable by the user, including installs under Program Files.
+                TryWriteDiagnostic(Path.Combine(AppDomain.CurrentDomain.BaseDirectory,"kitsu-error.txt"),details);
+                try { Console.Error.WriteLine(details); } catch { }
+                return;
+            }
+            string message="Кицу не удалось запустить или продолжить работу.\r\n\r\n"+
+                (log!=null ? "Подробности сохранены в файле:\r\n"+log : "Не удалось сохранить файл с подробностями ошибки.")+"\r\n\r\n"+
+                "Сообщение: "+error.Message;
+            try { MessageBox.Show(message,"Кицу — ошибка",MessageBoxButtons.OK,MessageBoxIcon.Error); }
+            catch { /* Preserve the original exit code even if a dialog is unavailable. */ }
         }
         static void SelfTest() {
             PixelDog.Validate();

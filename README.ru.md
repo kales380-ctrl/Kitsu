@@ -1,6 +1,6 @@
-# Кицу · версия 4
+# Кицу · версия 5 · .NET 10
 
-[English](README.md) · [Скачать для Windows](https://github.com/kales380-ctrl/Kitsu/raw/refs/heads/main/downloads/Kitsu-v4-windows-x64.zip)
+[English](README.md) · [Скачать для Windows](https://github.com/kales380-ctrl/Kitsu/releases/latest/download/Kitsu-windows-x64.zip)
 
 ![Кицу](docs/kitsu-preview-v4.png)
 
@@ -8,7 +8,9 @@
 
 ## Запуск и игра
 
-Откройте **Кицу.exe**. Установка, интернет и дополнительные библиотеки не нужны. Требуется 64-битная Windows с .NET Framework 4.x (встроен в Windows 10/11).
+Скачайте [Kitsu для Windows x64](https://github.com/kales380-ctrl/Kitsu/releases/latest/download/Kitsu-windows-x64.zip), распакуйте архив и откройте **Kitsu.exe**. Требуется Windows 10/11 x64. Версия 5 работает на .NET 10; среда выполнения и все рисунки включены в программу. Устанавливать .NET или SDK для запуска не нужно. После скачивания приложение работает без интернета.
+
+Если при запуске возникает ошибка, Кицу показывает сообщение и сохраняет подробности в `%LocalAppData%\Kitsu\kitsu-error.txt`. Этот путь можно вставить в адресную строку Проводника. Если основная папка недоступна, используется `%TEMP%\Kitsu\kitsu-error.txt`. Текст ошибки поможет сообщить о проблеме в Issues репозитория.
 
 - Один клик — погладить.
 - Двойной клик — бросить мячик.
@@ -87,12 +89,24 @@ src/ToyArt.cs рисует игрушки в их прозрачных окна�
 
 `src/Kitsu.cs` — поведение, меню и команды. `src/AnimationArt.cs` — циклы движения и переходы поз. `src/DogArt.cs` — исходные позы и синтез лая. `src/AlphaForm.cs` — окно с альфа-прозрачностью. `src/DesktopIcons.cs` — ограниченный адаптер расположения значков.
 
-Для пересборки запустите `build.ps1` в Windows PowerShell. Все рисунки встраиваются в .exe; отдельная папка assets для запуска не нужна.
+Для сборки исходников установите [.NET 10 SDK для Windows](https://dotnet.microsoft.com/en-us/download/dotnet/10.0). Откройте Windows PowerShell в папке проекта и выполните:
+
+```powershell
+.\build.ps1
+```
+
+Скрипт публикует автономный `artifacts\win-x64\Kitsu.exe` из проекта `Kitsu.csproj` (`net10.0-windows`). Первый запуск сборки требует интернета для восстановления пакетов .NET. Все рисунки и среда выполнения встраиваются в .exe; отдельная папка assets для запуска не нужна. SDK нужен только для сборки исходников и проверок.
+
+```powershell
+.\qa\run-tests.ps1
+```
+
+Проверочные сборки сохраняются отдельно в `artifacts\tests`; готовое приложение не перезаписывается. Подробности — в [qa/README.md](qa/README.md).
 
 `assets/kitsu-atlas.png` — исходный набор из 16 поз, созданный встроенным imagegen. `assets/art-prompt.txt` — точное описание генерации.
 
 Наборы версии 3: `kitsu-gait.png`, `kitsu-spin.png`, `kitsu-tail.png`, `kitsu-transitions.png`, `kitsu-comfort.png`, `kitsu-chew.png`. Они сохранены вместе с новыми наборами версии 4, перечисленными в `assets/animations.md`. Точные промпты лежат рядом с PNG.
 
-`Кицу.exe --preview kitsu-preview-v4.png` создаёт обзор поз. `--self-test` проверяет кадры и физику всех трёх игрушек. `--smoke-test` показывает собачку на три секунды с отключённой игрой с иконками и записывает результат проверки окна в `smoke-test.txt`.
+`Kitsu.exe --preview kitsu-preview-v4.png` создаёт обзор поз. `--self-test` проверяет кадры и физику всех трёх игрушек. `--smoke-test` показывает собачку на три секунды с отключённой игрой с иконками и записывает результат проверки окна в `smoke-test.txt` рядом с программой. Если эта папка недоступна для записи, результат сохраняется в `%LocalAppData%\Kitsu\smoke-test.txt`. При ошибках параметры командной строки возвращают код 1 и записывают журнал без диалогового окна.
 
 `--sequence-preview kitsu-sequences.png` создаёт обзор новых последовательностей. Встроенная проверка также контролирует, что циклы используют все новые фазы, заканчиваются в нужных позах и замыкаются.

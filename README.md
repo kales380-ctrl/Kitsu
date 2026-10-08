@@ -1,4 +1,4 @@
-# Kitsu · desktop Schipperke
+# Kitsu · desktop Schipperke · v5
 
 [Русская инструкция](README.ru.md)
 
@@ -8,11 +8,13 @@ Kitsu is an attentive, playful female Schipperke who lives on your Windows deskt
 
 ## Download and run
 
-**[Download Kitsu v4 for Windows x64](https://github.com/kales380-ctrl/Kitsu/raw/refs/heads/main/downloads/Kitsu-v4-windows-x64.zip)**
+**[Download Kitsu v5 for Windows x64](https://github.com/kales380-ctrl/Kitsu/releases/latest/download/Kitsu-windows-x64.zip)**
 
-Extract the ZIP and open **Кицу.exe**. No installer or Internet connection is needed. The executable includes every animation image. Requires 64-bit Windows and .NET Framework 4.x. The current menus are in Russian.
+Extract the ZIP and open **Kitsu.exe** on Windows 10/11 x64. Version 5 runs on .NET 10 and includes the runtime and every animation image in a self-contained executable. You do not need to install .NET or the SDK to run the downloaded package. No installer or Internet connection is needed after downloading. The current menus are in Russian.
 
 The archive's SHA-256 checksum is in [downloads/SHA256SUMS.txt](downloads/SHA256SUMS.txt).
+
+If Kitsu cannot start or encounters an error, it displays a message and writes details to `%LocalAppData%\Kitsu\kitsu-error.txt`. Paste that path into Explorer's address bar to open the log. If the location is unavailable, it falls back to `%TEMP%\Kitsu\kitsu-error.txt`. Include the error details when reporting an issue.
 
 ## Play with Kitsu
 
@@ -37,13 +39,13 @@ The app does not use the network or microphone. It does not configure automatic 
 
 ## Build from source
 
-Open Windows PowerShell in the repository folder:
+Install the [Windows .NET 10 SDK](https://dotnet.microsoft.com/en-us/download/dotnet/10.0), then open Windows PowerShell in the repository folder. The SDK is required only for building source and running development checks.
 
 ```powershell
 .\build.ps1
 ```
 
-The script uses the .NET Framework C# compiler bundled with Windows and writes Кицу.exe. No package restore is required. It embeds all 18 sprite atlases.
+The script publishes `artifacts\win-x64\Kitsu.exe` from `Kitsu.csproj`, targeting `net10.0-windows`. The first build restores .NET packages and needs Internet access. It embeds all 18 sprite atlases and the .NET runtime using [Microsoft's self-contained single-file deployment](https://learn.microsoft.com/en-us/dotnet/core/deploying/single-file/overview). The published executable runs without a separately installed runtime or SDK.
 
 ## Verification and animation sheets
 
@@ -51,7 +53,9 @@ The script uses the .NET Framework C# compiler bundled with Windows and writes �
 .\qa\run-tests.ps1
 ```
 
-Checks cover animation phases, transparent sprites, toy physics on monitors with negative coordinates, nine game states for each toy, interrupted play, consistent toy identity, laying down and getting up, single timed release during tossing and cleanup. The transparent pet window was also smoke-tested on Windows.
+The checks use .NET 10 and write separate test builds under `artifacts\tests`, without overwriting the portable app. They cover animation phases, transparent sprites, toy physics on monitors with negative coordinates, nine game states for each toy, interrupted play, consistent toy identity, laying down and getting up, single timed release during tossing and cleanup. See [qa/README.md](qa/README.md) for the additional window and visual checks.
+
+`Kitsu.exe --smoke-test` displays the transparent pet window for three seconds with icon play disabled. It writes `smoke-test.txt` beside the executable, or under `%LocalAppData%\Kitsu` when the application folder is read-only. Command-line failures return exit code 1 and log the error without opening a dialog.
 
 See [command and toy storyboards](docs/kitsu-commands-v4.png), [walking, running and turning sequences](docs/kitsu-sequences.png), and [asset names and exact generation prompts](assets/animations.md). Artwork was made with built-in imagegen; the character and toy details are stored in transparent PNG atlases.
 
@@ -59,6 +63,7 @@ See [command and toy storyboards](docs/kitsu-commands-v4.png), [walking, running
 
 - src/ — Windows Forms behavior, per-pixel windows, sprite rendering and desktop icon adapter.
 - assets/ — original sprite atlases and generation prompts.
+- Kitsu.csproj / build.ps1 — .NET 10 project and self-contained publishing script.
 - qa/ — behavior checks and visual diagnostics.
 - docs/ — illustrated animation previews.
 - downloads/ — portable Windows package and checksum.

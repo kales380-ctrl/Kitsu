@@ -1,0 +1,51 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net10.0-windows</TargetFramework>
+    <UseWindowsForms>true</UseWindowsForms>
+    <EnableWindowsTargeting>true</EnableWindowsTargeting>
+    <AssemblyName>Kitsu</AssemblyName>
+    <RootNamespace>KitsuDesktop</RootNamespace>
+    <Version>5.0.0</Version>
+    <Description>Kitsu, an animated Schipperke desktop companion</Description>
+    <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
+    <ImplicitUsings>disable</ImplicitUsings>
+    <Nullable>disable</Nullable>
+    <RuntimeIdentifier>win-x64</RuntimeIdentifier>
+    <SelfContained>true</SelfContained>
+    <PublishSingleFile>true</PublishSingleFile>
+    <IncludeNativeLibrariesForSelfExtract>true</IncludeNativeLibrariesForSelfExtract>
+    <EnableCompressionInSingleFile>true</EnableCompressionInSingleFile>
+    <PublishTrimmed>false</PublishTrimmed>
+    <DebugType>none</DebugType>
+    <DebugSymbols>false</DebugSymbols>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(ConsoleBuild)' == 'true'">
+    <OutputType>Exe</OutputType>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(TestMain)' != ''">
+    <StartupObject>$(TestMain)</StartupObject>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Include="src\*.cs" />
+    <Compile Include="$(TestSource)" Condition="'$(TestSource)' != ''" />
+    <EmbeddedResource Include="assets\kitsu-atlas.png" LogicalName="Kitsu.Atlas" />
+    <EmbeddedResource Include="assets\kitsu-gait.png" LogicalName="Kitsu.Gait" />
+    <EmbeddedResource Include="assets\kitsu-spin.png" LogicalName="Kitsu.Spin" />
+    <EmbeddedResource Include="assets\kitsu-tail.png" LogicalName="Kitsu.Tail" />
+    <EmbeddedResource Include="assets\kitsu-transitions.png" LogicalName="Kitsu.Transitions" />
+    <EmbeddedResource Include="assets\kitsu-comfort.png" LogicalName="Kitsu.Comfort" />
+    <EmbeddedResource Include="assets\kitsu-chew.png" LogicalName="Kitsu.Chew" />
+    <EmbeddedResource Include="assets\kitsu-ground.png" LogicalName="Kitsu.Ground" />
+    <EmbeddedResource Include="assets\kitsu-posture.png" LogicalName="Kitsu.Posture" />
+    <EmbeddedResource Include="assets\kitsu-paws.png" LogicalName="Kitsu.Paws" />
+    <EmbeddedResource Include="assets\kitsu-ambient.png" LogicalName="Kitsu.Ambient" />
+    <EmbeddedResource Include="assets\kitsu-rest-voice.png" LogicalName="Kitsu.RestVoice" />
+    <EmbeddedResource Include="assets\kitsu-ball-play.png" LogicalName="Kitsu.BallPlay" />
+    <EmbeddedResource Include="assets\kitsu-boar-play.png" LogicalName="Kitsu.BoarPlay" />
+    <EmbeddedResource Include="assets\kitsu-bone-play.png" LogicalName="Kitsu.BonePlay" />
+    <EmbeddedResource Include="assets\kitsu-toy-chew.png" LogicalName="Kitsu.ToyChew" />
+    <EmbeddedResource Include="assets\kitsu-ball-shake.png" LogicalName="Kitsu.BallShake" />
+    <EmbeddedResource Include="assets\kitsu-boar-shake.png" LogicalName="Kitsu.BoarShake" />
+  </ItemGroup>
+</Project>
