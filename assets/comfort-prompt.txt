@@ -1,0 +1,26 @@
+Use case: stylized-concept
+Asset type: transparent 4 by 4 equal-cell desktop dog animation sprite atlas.
+Input image: supplied atlas is IDENTITY AND STYLE REFERENCE ONLY. Preserve Kitsu's exact small female Schipperke body, very dense detailed black fur, black nose, upright pointed ears, warm brown eyes, curled fluffy tail, thin muted pink collar. Soft realistic illustrated rendering, not pixel art.
+Create a square transparent PNG sprite sheet with exactly sixteen separate full-body sprites, one centered within each of 4 equally spaced columns and 4 equally spaced rows. Sixteen equal square cells, generous transparent empty gutters, no visual grid. Full body and all paws fit each cell. Camera fixed and same dog scale through each sequence. Real articulated changes in neck, mouth, head and forelegs. First two rows chew a small ivory toy bone and last two rows enjoy petting.
+Frames in STRICT row-major chronological order:
+ROW 1 PICKUP BONE, RIGHT-FACING SIDE VIEW:
+cell 1 Kitsu standing facing right, head tipped toward small ivory dog toy bone lying beside her front paws;
+cell 2 head and neck lowering toward the bone, legs planted;
+cell 3 muzzle at the bone with mouth opening to grasp it, ears alert;
+cell 4 teeth grasp ivory bone across muzzle, lifting it just off the implied ground.
+ROW 2 CHEW BONE, SAME RIGHT-FACING SIDE VIEW:
+cell 5 head raised with ivory bone held firmly across mouth, standing;
+cell 6 Kitsu lowers onto her elbows in a relaxed lying pose, ivory bone between front paws and mouth;
+cell 7 lying on elbows, front paws pin the visible ivory bone, mouth opened a little as she gnaws its end, upper and lower jaw visibly separated around bone, ears relaxed;
+cell 8 lying on elbows, front paws pin the visible ivory bone, mouth closes as she gently bites and chews its end, satisfied expression. Bone remains clearly visible.
+ROW 3 START PETTING, FRONT THREE-QUARTER VIEW FACING SLIGHTLY RIGHT:
+cell 9 standing calm with head upright and warm brown eyes open;
+cell 10 same standing pose, eyelids halfway lowering and head softening;
+cell 11 eyes softly closed, nose gently lifting a little, same body and grounded paws;
+cell 12 eyes closed, chin and muzzle lifting upward further in pleasure, ears relaxed. NO jump or lifted body.
+ROW 4 CONTENTED PETTING, SAME FRONT THREE-QUARTER VIEW:
+cell 13 all four paws firmly grounded, eyes fully closed, chin lifted, small relaxed contented mouth;
+cell 14 same pose with head softly tilting to her left and chin still up, eyes fully closed;
+cell 15 head centered, eyes closed, pleased relaxed tiny smile and lifted muzzle;
+cell 16 eyes still soft and nearly closed, head gently settles a little lower, all four paws firmly grounded.
+Constraints: sixteen distinct progressive poses, one dog per cell, realistic joints, no scale drift within sequence, full body never clipped. First 8 sprites have one tiny ivory toy bone at the described correct location. Last 8 sprites NO bone. No human or hand. Petting dog never jumps. Background actually transparent alpha, no backdrop, no floor, no shadow, no text, no labels, no divider, no border, no watermark.

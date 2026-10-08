@@ -1,0 +1,2 @@
+28dad1c67f548fd07b891de943bd6f1e80c51976fabc734b94c25c7702b1c15a  Kitsu-v4-windows-x64.zip
+2901ccd8a3ebd8710df35e06a341c0014d6cf44d0cc298bd710faa22c7d77e9c  ????.exe (inside the ZIP)

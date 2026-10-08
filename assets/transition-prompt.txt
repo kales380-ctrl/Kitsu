@@ -1,0 +1,26 @@
+Use case: stylized-concept
+Asset type: transparent 4 by 4 equal-cell desktop pet animation sprite atlas.
+Input image: supplied atlas is IDENTITY AND STYLE REFERENCE ONLY. Preserve Kitsu's exact small female Schipperke body, very dense detailed black fur, black nose, upright pointed ears, warm brown eyes, curled fluffy tail, thin muted pink collar. Soft realistic illustrated rendering, not pixel art.
+Create a square 2048x2048 transparent PNG sprite sheet with exactly sixteen separate full-body sprites, one centered within each of 4 equally spaced columns and 4 equally spaced rows. Sixteen equal square cells, generous transparent empty gutters, no visual grid. Full body and all paws fit each cell. Fixed camera and dog scale through each sequence, dog rests on the same implied ground baseline within each cell; airborne poses show leg changes without shifting sprite scale. Do not rotate a flat standing picture: every frame must show anatomically natural new articulated body posture.
+Frames in STRICT row-major chronological order:
+ROW 1 JUMP PREPARATION, RIGHT-FACING SIDE VIEW:
+cell 1 relaxed right-facing standing side profile, all four paws planted;
+cell 2 lowers shoulders and bends all legs in shallow crouch to prepare jumping;
+cell 3 deeper compact crouch, chest lowered, hind legs folded storing force, head still aimed right;
+cell 4 pushes strongly off ground with extending hind legs and raising forelegs.
+ROW 2 JUMP AND LANDING, SAME RIGHT-FACING SIDE VIEW:
+cell 5 airborne with body extended, forelegs reaching forward and hind legs extended backward;
+cell 6 airborne apex with legs tucked under torso, alert face;
+cell 7 landing forepaws touching implied ground, rear legs still lifted, wrists and shoulders naturally taking load;
+cell 8 landing compression crouch with all four paws down, shoulder and hind leg joints bent.
+ROW 3 PLAY-DEAD TRANSITION, RIGHT-FACING SIDE VIEW:
+cell 9 relaxed right-facing standing side profile;
+cell 10 front legs bending and chest lowering toward ground, rump beginning to lower;
+cell 11 chest-down lying with forelegs forward and hindquarters settled, head upright;
+cell 12 chest-down lying as head turns upward and torso begins leaning onto near hip, one front paw lifting.
+ROW 4 ROLL TO BACK, CAMERA STAYS FIXED:
+cell 13 whole dog naturally lying on near side, belly sideways and relaxed bent legs visible;
+cell 14 dog halfway rolling from side onto back, belly becoming visible with four bent paws lifting upward, head resting at right side;
+cell 15 dog completely on her back with belly facing up, four bent paws up, head on ground at right, physically natural furry supine dog;
+cell 16 relaxed on back, all four paws loosely raised, happy brown-eyed expression, head still ground at right.
+Constraints: sixteen unique progressive poses, one dog per cell, full body never clipped, realistic leg bending and load bearing, preserved identity, same scale within sequence. Background actually transparent alpha, no backdrop, no floor, no shadows, no text, no labels, no dividers, no border, no watermark.

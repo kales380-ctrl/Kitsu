@@ -1,0 +1,8 @@
+*.exe
+*.pdb
+bin/
+obj/
+.vs/
+smoke-test.txt
+kitsu-error.txt
+qa/toy-*.png
