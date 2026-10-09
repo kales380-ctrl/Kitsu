@@ -216,7 +216,9 @@ internal sealed class DesktopHome : OverlayWindow
 internal sealed class MacPet : OverlayWindow
 {
     private readonly Random rng = new();
-    private readonly DispatcherTimer timer = new() { Interval = TimeSpan.FromMilliseconds(16) };
+    // Animation is visible UI work. Background priority can be starved by the
+    // first native layout/font/shader initialization on a fresh macOS session.
+    private readonly DispatcherTimer timer = new(DispatcherPriority.Normal) { Interval = TimeSpan.FromMilliseconds(16) };
     private readonly Stopwatch clock = Stopwatch.StartNew();
     private readonly ContextMenu menu = new();
     private readonly Canvas canvas = new();
@@ -233,6 +235,7 @@ internal sealed class MacPet : OverlayWindow
     private WorkArea area;
     private float x, y, tx, ty, toyRollSpeed;
     private double last, timeline, until, bubbleUntil, happyUntil, stateStart, previousAnimation, toyPlayUntil, toyChewSeconds, bedDuration;
+    private double firstTickWall, maximumTickGap;
     private Mood mood = Mood.Idle, previousMood = Mood.Idle, lastToyAction = Mood.Idle, homeNextMood, homeRiseMood;
     private bool right = true, dragging, paused, closing, moving, petResumePlay, tossReleased, follow, inBed, bedSleep, foodRight, sound = true;
     private int scale = 4, chaseCount, pendingMeals, ticks;
@@ -564,12 +567,15 @@ internal sealed class MacPet : OverlayWindow
     {
         try
         {
-            double wall = clock.Elapsed.TotalSeconds, dt = Math.Clamp(wall - last, 0, .05); last = wall; ticks++;
-            if (smoke && wall > 3)
+            double wall = clock.Elapsed.TotalSeconds, gap = Math.Max(0, wall - last), dt = Math.Clamp(gap, 0, .05); last = wall; ticks++;
+            if (ticks == 1) firstTickWall = wall;
+            maximumTickGap = Math.Max(maximumTickGap, gap);
+            if (smoke && wall >= 3 && wall < 15 && ticks >= 30)
             {
-                if (ticks < 30) throw new InvalidOperationException("The native UI pump did not render enough timer frames.");
-                Console.WriteLine("PASS: macOS Avalonia overlay; " + ticks + " timer frames; sprites, alpha, commands, toys, bed and feeder validated."); Close(); return;
+                Console.WriteLine("PASS: macOS Avalonia overlay; " + ticks + " timer frames in " + wall.ToString("F3", CultureInfo.InvariantCulture) + " seconds; first tick " + firstTickWall.ToString("F3", CultureInfo.InvariantCulture) + " seconds; maximum tick gap " + maximumTickGap.ToString("F3", CultureInfo.InvariantCulture) + " seconds; sprites, alpha, commands, toys, bed and feeder validated."); Close(); return;
             }
+            if (smoke && wall >= 15)
+                throw new InvalidOperationException("Native UI smoke timeout: " + ticks + " timer frames in " + wall.ToString("F3", CultureInfo.InvariantCulture) + " seconds; first tick " + firstTickWall.ToString("F3", CultureInfo.InvariantCulture) + " seconds; maximum tick gap " + maximumTickGap.ToString("F3", CultureInfo.InvariantCulture) + " seconds; require at least 30 frames.");
             if (!smoke) pendingMeals += meals.Poll(DateTime.Now);
             PixelPoint cursor = NativeDesktop.Pointer; UpdateHitTest(cursor); bed.UpdateHitTest(cursor); feeder.UpdateHitTest(cursor); foreach (DesktopToy item in toys) item.UpdateHitTest(cursor);
             if (paused || dragging || bed.Dragging || feeder.Dragging || menu.IsOpen) { Render(); return; }

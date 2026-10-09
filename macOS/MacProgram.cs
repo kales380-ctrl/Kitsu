@@ -36,8 +36,14 @@ internal static class MacProgram
                 try { instance = new FileStream(Path.Combine(DataDirectory, "running.lock"), FileMode.OpenOrCreate, FileAccess.ReadWrite, FileShare.None); }
                 catch (IOException) { Console.WriteLine("Кицу уже запущена. Откройте её меню в строке меню macOS."); return 0; }
             }
-            int result = AppBuilder.Configure<KitsuApplication>().UsePlatformDetect().LogToTrace()
-                .StartWithClassicDesktopLifetime(args, ShutdownMode.OnExplicitShutdown);
+            AppBuilder builder = AppBuilder.Configure<KitsuApplication>().UsePlatformDetect().LogToTrace();
+            // Small bitmap overlays need no GPU effects. Software rendering also
+            // avoids a cold Metal shader compilation delaying the native UI pump.
+            if (OperatingSystem.IsMacOS()) builder.With(new AvaloniaNativePlatformOptions
+            {
+                RenderingMode = new[] { AvaloniaNativeRenderingMode.Software }
+            });
+            int result = builder.StartWithClassicDesktopLifetime(args, ShutdownMode.OnExplicitShutdown);
             return Failed ? 1 : result;
         }
         catch (Exception ex) { ReportError(ex); return 1; }
