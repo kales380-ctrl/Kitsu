@@ -6,6 +6,7 @@ using System.Windows.Forms;
 using System.Diagnostics;
 using System.IO;
 using System.Text;
+using System.Collections.Generic;
 
 namespace KitsuDesktop {
     enum Mood { Walk, Run, Idle, Sniff, Sleep, Jump, Chase, Play, Follow, Chew, Bow, Bark, Spin, PawLeft, PawRight, Bunny, Sit, Lie, Dead, IconPlay, Pet, ToyPickup, ToyCarry, ToyShake, ToyRoll, ToyToss, ToyChew, Wake, RiseSit, RiseLie, RiseDead, ToySettle, ToyRise, GoBed, BedLie, BedSleep, LeaveBed, GoFood, FeedLower, FeedChew, FeedRaise, LeaveFood, HomeRise }
@@ -81,6 +82,7 @@ namespace KitsuDesktop {
         Point dragOffset,dragStart;
         int scale=4;
         ToyForm toy;
+        readonly List<ToyForm> toys=new List<ToyForm>();
         Icon petIcon;
         int chaseCount;
         double toyPlayUntil;
@@ -124,14 +126,14 @@ namespace KitsuDesktop {
             Microsoft.Win32.SystemEvents.DisplaySettingsChanged+=DisplayChanged;
         }
         [System.Runtime.InteropServices.DllImport("user32.dll")] static extern bool DestroyIcon(IntPtr h);
-        void DisplayChanged(object sender,EventArgs e) { if(!IsDisposed && IsHandleCreated) BeginInvoke((Action)delegate { area=Screen.FromPoint(new Point((int)x,(int)y)).WorkingArea; bed.ClampTo(Screen.FromPoint(bed.Location).WorkingArea); feeder.ClampTo(Screen.FromPoint(feeder.Location).WorkingArea); SaveHome(); Clamp(); }); }
+        void DisplayChanged(object sender,EventArgs e) { if(!IsDisposed && IsHandleCreated) BeginInvoke((Action)delegate { area=Screen.FromPoint(new Point((int)x,(int)y)).WorkingArea; bed.ClampTo(Screen.FromPoint(bed.Location).WorkingArea); feeder.ClampTo(Screen.FromPoint(feeder.Location).WorkingArea); foreach(ToyForm item in toys) if(!item.Held && !item.Dragging) { Rectangle work=ToyArea(item); item.Release(item.X,item.Y,item.VX,item.VY,work); } SaveHome(); Clamp(); }); }
         void BuildMenu() {
             var title=new ToolStripMenuItem("Кицу · шипперке ♀"); title.Enabled=false; menu.Items.Add(title);
             menu.Items.Add("Погладить ♥",null,delegate { Pet(); });
             menu.Items.Add("Бросить мячик",null,delegate { ThrowBall(); });
             menu.Items.Add("Дать игрушку-косточку",null,delegate { ThrowBall(true); });
             menu.Items.Add("Дать любимого резинового кабанчика",null,delegate { ThrowToy(ToyKind.Boar); });
-            menu.Items.Add("Убрать игрушку",null,delegate { StopIcons(); RemoveToy(); Choose(); });
+            menu.Items.Add("Убрать все игрушки",null,delegate { StopIcons(); RemoveToy(); Choose(); });
             var commands=new ToolStripMenuItem("Команды");
             commands.DropDownItems.Add("Поклон",null,delegate { Command(Mood.Bow,5,"Поклон!"); });
             commands.DropDownItems.Add("Прыжок",null,delegate { Command(Mood.Jump,1.1,"Оп!"); });
@@ -151,7 +153,7 @@ namespace KitsuDesktop {
             menu.Items.Add("Покормить Кицу",null,delegate { StartMeal(); });
             menu.Items.Add("Вернуть лежанку и кормушку на этот монитор",null,delegate { ResetHome(); SaveHome(); });
             menu.Items.Add("Спать / проснуться",null,delegate { DropHeldToy(); StopIcons(); if(mood==Mood.Sleep || mood==Mood.BedSleep) { Wake(); Speak("Уже встала!",2); } else { followItem.Checked=false; SetMood(Mood.Sleep,double.PositiveInfinity); Speak("Спокойной ночи…",3); } });
-            followItem.CheckOnClick=true; followItem.Click+=delegate { Wake(); StopIcons(); if(followItem.Checked) { RemoveToy(); SetMood(Mood.Follow,3600); Speak("Поиграем?",2); } else Choose(); }; menu.Items.Add(followItem);
+            followItem.CheckOnClick=true; followItem.Click+=delegate { Wake(); StopIcons(); if(followItem.Checked) { StopToyPlay(); SetMood(Mood.Follow,3600); Speak("Поиграем?",2); } else Choose(); }; menu.Items.Add(followItem);
             menu.Items.Add(new ToolStripSeparator());
             iconItem.Checked=!smoke; iconItem.CheckOnClick=true;
             iconItem.Click+=delegate { if(!iconItem.Checked) StopIcons(); nextIcon=timeline+90; }; menu.Items.Add(iconItem);
@@ -161,11 +163,11 @@ namespace KitsuDesktop {
             menu.Items.Add(new ToolStripSeparator());
             pauseItem.CheckOnClick=true; pauseItem.Click+=delegate { paused=pauseItem.Checked; if(paused) StopIcons(); }; menu.Items.Add(pauseItem);
             var top=new ToolStripMenuItem("Поверх окон"); top.Checked=true; top.CheckOnClick=true;
-            top.Click+=delegate { TopMost=top.Checked; if(toy!=null) toy.TopMost=TopMost; if(bed!=null) bed.TopMost=TopMost; if(feeder!=null) feeder.TopMost=TopMost; }; menu.Items.Add(top);
+            top.Click+=delegate { TopMost=top.Checked; foreach(ToyForm item in toys) item.TopMost=TopMost; if(bed!=null) bed.TopMost=TopMost; if(feeder!=null) feeder.TopMost=TopMost; }; menu.Items.Add(top);
             var sizes=new ToolStripMenuItem("Размер");
             foreach(int n in new int[] {3,4,5}) { int size=n; sizes.DropDownItems.Add(n==3 ? "Маленькая" : n==4 ? "Обычная" : "Крупная",null,delegate { scale=size; ResizePet(); bed.ResizeObject(scale); feeder.ResizeObject(scale); bed.ClampTo(Screen.FromControl(bed).WorkingArea); feeder.ClampTo(Screen.FromControl(feeder).WorkingArea); SaveHome(); Clamp(); }); }
             menu.Items.Add(sizes);
-            menu.Items.Add("На другой монитор",null,delegate { StopIcons(); RemoveToy(); Screen[] all=Screen.AllScreens; int idx=Array.FindIndex(all,s=>s.WorkingArea==area); area=all[(idx+1)%all.Length].WorkingArea; x=area.Left+area.Width/2; y=area.Bottom-12; inBed=false; ResetHome(); SaveHome(); Choose(); });
+            menu.Items.Add("На другой монитор",null,delegate { StopIcons(); StopToyPlay(); Screen[] all=Screen.AllScreens; int idx=Array.FindIndex(all,s=>s.WorkingArea==area); area=all[(idx+1)%all.Length].WorkingArea; x=area.Left+area.Width/2; y=area.Bottom-12; inBed=false; ResetHome(); SaveHome(); Choose(); });
             menu.Items.Add("Как играть",null,delegate { Speak("Клик — ласка • два клика — мяч",5); });
             menu.Items.Add(new ToolStripSeparator()); menu.Items.Add("Закрыть Кицу",null,delegate { Close(); });
         }
@@ -207,13 +209,32 @@ namespace KitsuDesktop {
             if(Math.Abs(Cursor.Position.X-dragStart.X)+Math.Abs(Cursor.Position.Y-dragStart.Y)<=5) Pet();
             else { tx=x; ty=y; SetMood(Mood.Idle,2); Speak("Ух, новое место!",2); }
         }
-        void RemoveToy() { petResumePlay=false; toyPlayUntil=0; tossReleased=false; if(toy!=null) { toy.Close(); toy.Dispose(); toy=null; } }
+        void StopToyPlay() { DropHeldToy(); petResumePlay=false; toyPlayUntil=0; tossReleased=false; }
+        void RemoveToy() {
+            // Explicit cleanup is the only action that removes desktop toys.
+            petResumePlay=false; toyPlayUntil=0; tossReleased=false; toy=null;
+            foreach(ToyForm item in toys) { item.Released=null; item.Close(); item.Dispose(); }
+            toys.Clear();
+        }
+        static Rectangle ToyArea(ToyForm item) { return Screen.FromPoint(new Point((int)item.X,(int)item.Y)).WorkingArea; }
+        void StepToys(double dt) { foreach(ToyForm item in toys) item.Step(dt,ToyArea(item)); }
+        void SelectToy(ToyForm selected) {
+            if(!ReferenceEquals(toy,selected)) DropHeldToy();
+            toy=selected; petResumePlay=false; chaseCount=0; lastToyAction=Mood.Idle; tossReleased=false;
+        }
         void ThrowBall() { ThrowBall(false); }
         void ThrowBall(bool bone) { ThrowToy(bone ? ToyKind.Bone : ToyKind.Ball); }
         void ThrowToy(ToyKind kind) {
-            Wake(); StopIcons(); followItem.Checked=false; RemoveToy(); toy=new ToyForm(smoke); toy.TopMost=TopMost;
-            toy.Kind=kind;
-            toy.Released=delegate { Wake(); StopIcons(); followItem.Checked=false; toyPlayUntil=timeline+180; StartToyFetch(); Speak(ToyGreeting(toy.Kind),2); };
+            Wake(); StopIcons(); followItem.Checked=false;
+            ToyForm selected=toys.Find(item=>item.Kind==kind);
+            if(selected==null) {
+                selected=new ToyForm(smoke); selected.Kind=kind; toys.Add(selected);
+                // Capture this window, so releasing an older toy makes that exact
+                // toy active even after another kind has been selected.
+                ToyForm releasedToy=selected;
+                selected.Released=delegate { if(closing || releasedToy.IsDisposed || !toys.Contains(releasedToy)) return; Wake(); StopIcons(); followItem.Checked=false; SelectToy(releasedToy); toyPlayUntil=timeline+180; StartToyFetch(); Speak(ToyGreeting(releasedToy.Kind),2); };
+            }
+            DropHeldToy(); SelectToy(selected); toy.TopMost=TopMost;
             toy.Release(MouthX(),MouthY(),(right ? 1 : -1)*rng.Next(240,440),-380,area);
             chaseCount=0; lastToyAction=Mood.Idle; toyPlayUntil=timeline+180; StartToyFetch(); Speak(ToyGreeting(kind),2);
         }
@@ -352,6 +373,11 @@ namespace KitsuDesktop {
             if(FeedingActive()) return;
             paused=false; pauseItem.Checked=false; StopIcons(); DropHeldToy(); followItem.Checked=false; toyPlayUntil=0;
             foodRight=x<=feeder.BowlPoint.X;
+            // Approach from the side with enough room for all four paws. A
+            // later screen clamp must not push the body back onto the bowl.
+            Rectangle diningArea=Screen.FromPoint(feeder.Location).WorkingArea;
+            PointF diningPoint=feeder.FeedingPosition(foodRight);
+            if(diningPoint.X<diningArea.Left+26*scale || diningPoint.X>diningArea.Right-26*scale) foodRight=!foodRight;
             feeder.Dispense(timeline); PrepareHomeTravel(Mood.GoFood);
             Speak("Пора кушать!",3);
         }
@@ -373,15 +399,14 @@ namespace KitsuDesktop {
                     else { inBed=false; Choose(); }
                 }
             } else if(mood==Mood.GoFood) {
-                PointF bowl=feeder.BowlPoint;
-                float targetX=bowl.X+(foodRight ? -65 : 65)*scale/4f;
-                float targetY=bowl.Y+15*scale/4f;
+                PointF stand=feeder.FeedingPosition(foodRight);
+                float targetX=stand.X,targetY=stand.Y;
                 MoveTowards(targetX,targetY,230,dt);
                 if(Math.Abs(x-targetX)<3 && Math.Abs(y-targetY)<3 && now>=feeder.DispenseUntil) {
                     x=targetX; y=targetY; right=foodRight; SetMood(Mood.FeedLower,.48);
                 }
             } else if(mood==Mood.FeedLower || mood==Mood.FeedChew || mood==Mood.FeedRaise) {
-                PointF bowl=feeder.BowlPoint; x=bowl.X+(foodRight ? -65 : 65)*scale/4f; y=bowl.Y+15*scale/4f; right=foodRight;
+                PointF stand=feeder.FeedingPosition(foodRight); x=stand.X; y=stand.Y; right=foodRight;
                 if(mood==Mood.FeedChew) feeder.Food=Math.Max(0,1-(now-stateStart)/12);
                 if(now>=until) {
                     if(mood==Mood.FeedLower) SetMood(Mood.FeedChew,12);
@@ -420,7 +445,7 @@ namespace KitsuDesktop {
             if(!manual && !DesktopIcons.DesktopIsForeground()) return;
             string reason; icons=DesktopIcons.Begin(rng,area,out reason);
             if(icons==null) { if(manual) Speak(reason,5); return; }
-            Wake(); RemoveToy(); followItem.Checked=false; manualIcon=manual;
+            Wake(); StopToyPlay(); followItem.Checked=false; manualIcon=manual;
             icons.Restore=restoreItem.Checked;
             tx=icons.ScreenPosition.X+(icons.ScreenPosition.X<area.Left+area.Width/2 ? 80 : -80);
             tx=Math.Max(area.Left+26*scale,Math.Min(area.Right-26*scale,tx));
@@ -446,7 +471,8 @@ namespace KitsuDesktop {
             area=Screen.FromPoint(new Point((int)x,(int)y)).WorkingArea;
             if(mood==Mood.GoBed) area=Screen.FromPoint(bed.Location).WorkingArea;
             else if(mood==Mood.GoFood) area=Screen.FromPoint(feeder.Location).WorkingArea;
-            if(toy!=null) toy.Step(dt,area);
+            else if(mood==Mood.Play && toy!=null) area=ToyArea(toy);
+            StepToys(dt);
             feeder.Step(now);
             if(pendingMeals>0 && !FeedingActive()) { pendingMeals--; StartMeal(); }
             if(iconItem.Checked && now>nextIcon && (mood==Mood.Idle || mood==Mood.Walk || mood==Mood.Sniff)) StartIcons(false);

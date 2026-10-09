@@ -7,3 +7,7 @@ artifacts/
 smoke-test.txt
 kitsu-error.txt
 qa/toy-*.png
+
+.DS_Store
+*.app/
+*.zip

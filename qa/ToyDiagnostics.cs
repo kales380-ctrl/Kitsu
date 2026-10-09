@@ -29,16 +29,29 @@ namespace KitsuDesktop {
    sheet.Save(System.IO.Path.Combine(AppDomain.CurrentDomain.BaseDirectory,"toy-toss-actual.png"),ImageFormat.Png);
   }
   Mood[] transitions={Mood.ToySettle,Mood.ToyChew,Mood.ToyRise};
-  using(Bitmap sheet=new Bitmap(1664,1344)) using(Graphics g=Graphics.FromImage(sheet)) using(Font label=new Font("Segoe UI",11)) {
+  using(Bitmap sheet=new Bitmap(1664,2016)) using(Graphics g=Graphics.FromImage(sheet)) using(Font label=new Font("Segoe UI",11)) {
    g.Clear(Color.FromArgb(232,221,209));
-   for(int kindIndex=0;kindIndex<2;kindIndex++) for(int transition=0;transition<3;transition++) for(int col=0;col<8;col++) {
-    int row=kindIndex*3+transition; ToyKind kind=kindIndex==0 ? ToyKind.Ball : ToyKind.Boar;
+   for(int kindIndex=0;kindIndex<3;kindIndex++) for(int transition=0;transition<3;transition++) for(int col=0;col<8;col++) {
+    int row=kindIndex*3+transition; ToyKind kind=kinds[kindIndex];
     double span=transition==1 ? .96 : .95,time=span*col/8+.002;
     Rectangle at=new Rectangle(col*208,row*224+32,208,176);
     using(Bitmap b=PixelDog.Draw(transitions[transition],time,true,false,0,kind)) g.DrawImageUnscaled(b,at.Location);
     g.DrawString(kind+" "+transitions[transition]+" f="+col,label,Brushes.Black,col*208+5,row*224+5);
    }
    sheet.Save(System.IO.Path.Combine(AppDomain.CurrentDomain.BaseDirectory,"toy-chew-transitions.png"),ImageFormat.Png);
+  }
+  // Actual neighboring state boundaries reveal visual jumps that counting
+  // animation keys cannot catch. Include both walking directions and all toys.
+  Mood[] boundaryMoods={Mood.ToyCarry,Mood.ToySettle,Mood.ToySettle,Mood.ToyChew,Mood.ToyChew,Mood.ToyRise,Mood.ToyRise,Mood.ToyCarry};
+  double[] boundaryTimes={.639999,0,.949999,0,.959999,0,.949999,0};
+  using(Bitmap sheet=new Bitmap(1664,1344)) using(Graphics g=Graphics.FromImage(sheet)) using(Font label=new Font("Segoe UI",11)) {
+   g.Clear(Color.FromArgb(232,221,209));
+   for(int kindIndex=0;kindIndex<3;kindIndex++) for(int direction=0;direction<2;direction++) for(int col=0;col<8;col++) {
+    int row=kindIndex*2+direction;
+    using(Bitmap b=PixelDog.Draw(boundaryMoods[col],boundaryTimes[col],direction==0,false,0,kinds[kindIndex])) g.DrawImageUnscaled(b,col*208,row*224+32);
+    g.DrawString(kinds[kindIndex]+" "+(direction==0 ? "R " : "L ")+boundaryMoods[col]+" "+(boundaryTimes[col]==0 ? "start" : "end"),label,Brushes.Black,col*208+5,row*224+5);
+   }
+   sheet.Save(System.IO.Path.Combine(AppDomain.CurrentDomain.BaseDirectory,"toy-grip-boundaries.png"),ImageFormat.Png);
   }
   for(int frame=0;frame<8;frame++) using(Bitmap b=PixelDog.Draw(Mood.Lie,.95*frame/8+.002,true,false,0,ToyKind.None)) {
    int top=176,bottom=0,left=208,right=0;

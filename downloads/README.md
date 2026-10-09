@@ -1,9 +1,10 @@
-# Portable Windows package
+# Download Kitsu
 
-Download [Kitsu-windows-x64.zip](https://github.com/kales380-ctrl/Kitsu/releases/latest/download/Kitsu-windows-x64.zip), extract it and run **Kitsu.exe** on Windows 10/11 x64. This is version 6, built with .NET 10. The archive contains the executable and short instructions in English and Russian. The .NET runtime and animation images are embedded, so users do not need to install .NET or the SDK.
+Ready-to-run packages are attached to [the latest release](https://github.com/kales380-ctrl/Kitsu/releases/latest):
 
-Source builders need the .NET 10 SDK; see the repository README for build and test commands. Startup error details are saved under `%LocalAppData%\Kitsu\kitsu-error.txt`.
+- `Kitsu-windows-x64.zip` — Windows 10/11 x64.
+- `Kitsu-macos-arm64.zip` — macOS 14+ on Apple Silicon.
+- `Kitsu-macos-x64.zip` — macOS 14+ on Intel.
+- `SHA256SUMS.txt` — checksums for the three archives and Windows executable.
 
-SHA256SUMS.txt records the SHA-256 checksum of the ZIP and the executable inside it.
-
-The portable ZIP is attached to [GitHub Releases](https://github.com/kales380-ctrl/Kitsu/releases/latest). The checksum file remains here and is also attached to the release.
+Extract the archive and open Kitsu.exe or Kitsu.app. The .NET 10 runtime is included. Archives are release assets rather than files in Git.

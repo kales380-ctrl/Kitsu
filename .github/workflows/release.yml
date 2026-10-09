@@ -1,0 +1,208 @@
+name: Build and release Kitsu
+
+on:
+  push:
+    branches: [main]
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      release_tag:
+        description: Existing release tag to rebuild and upload (leave empty for checks only)
+        required: false
+        default: ''
+        type: string
+
+permissions:
+  contents: read
+
+env:
+  DOTNET_CLI_TELEMETRY_OPTOUT: '1'
+  DOTNET_NOLOGO: '1'
+  RELEASE_TAG: ${{ github.event.release.tag_name || inputs.release_tag || '' }}
+
+jobs:
+  windows:
+    name: Windows x64 — six checks and standalone launch
+    runs-on: windows-2025
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ inputs.release_tag || github.ref }}
+          persist-credentials: false
+      - uses: actions/setup-dotnet@v6
+        with:
+          dotnet-version: '10.0.x'
+      - name: Validate release version
+        shell: pwsh
+        run: |
+          $taskVersion = ([xml](Get-Content -Raw -LiteralPath Kitsu.csproj)).Project.PropertyGroup.Version | Where-Object { $_ } | Select-Object -First 1
+          if ($env:RELEASE_TAG -and $env:RELEASE_TAG -ne "v$taskVersion") { throw "Release tag must be v$taskVersion." }
+      - name: Check sprites, toy grip and persistence, home, feeding geometry and window layers
+        shell: pwsh
+        run: ./qa/run-tests.ps1 -DotnetPath (Get-Command dotnet).Source
+      - name: Publish standalone Windows application
+        shell: pwsh
+        run: ./build.ps1 -DotnetPath (Get-Command dotnet).Source -Runtime win-x64 -OutputPath "$env:GITHUB_WORKSPACE/artifacts/windows/Kitsu.exe"
+      - name: Launch the packaged executable
+        shell: pwsh
+        run: |
+          $taskExe = Join-Path $env:GITHUB_WORKSPACE 'artifacts/windows/Kitsu.exe'
+          $taskProcess = Start-Process -FilePath $taskExe -ArgumentList '--smoke-test' -WindowStyle Hidden -PassThru
+          if (-not $taskProcess.WaitForExit(30000)) { throw 'Standalone Windows launch timed out.' }
+          if ($taskProcess.ExitCode -ne 0) { throw "Standalone Windows launch failed: $($taskProcess.ExitCode)" }
+          $taskResult = Get-Content -Raw -LiteralPath (Join-Path (Split-Path $taskExe) 'smoke-test.txt')
+          if ($taskResult -notmatch '^PASS') { throw $taskResult }
+          Write-Output $taskResult
+      - name: Create the Windows ZIP and checksums
+        shell: pwsh
+        run: |
+          $taskDist = Join-Path $env:GITHUB_WORKSPACE 'artifacts/distribution'
+          New-Item -ItemType Directory -Force -Path $taskDist | Out-Null
+          $taskExe = Join-Path $env:GITHUB_WORKSPACE 'artifacts/windows/Kitsu.exe'
+          $taskEn = Join-Path $env:GITHUB_WORKSPACE 'artifacts/windows/START-HERE.txt'
+          $taskRu = Join-Path $env:GITHUB_WORKSPACE 'artifacts/windows/ПРОЧТИ-МЕНЯ.txt'
+          @'
+          Kitsu for Windows 10/11 x64 — standalone .NET 10 application
+
+          Extract the ZIP and run Kitsu.exe. No .NET installation is required.
+          Right-click Kitsu for commands. Ball, bone and boar can stay together.
+          Drag and release any toy to play again. Choose «Убрать все игрушки» to remove all.
+          Click the feeder to give food; automatic meals use PC time: 10:00, 17:00, 22:00.
+          «Место» sends Kitsu to her bed; «Иди спать» puts her to sleep there.
+          You can drag the bed and feeder. The tray icon has the same menu.
+          Error log: %LocalAppData%\Kitsu\kitsu-error.txt
+          '@ | Set-Content -LiteralPath $taskEn -Encoding utf8NoBOM
+          @'
+          Кицу для Windows 10/11 x64 — самостоятельное приложение на .NET 10
+
+          Распакуйте ZIP и запустите Kitsu.exe. Отдельная установка .NET не нужна.
+          Меню команд открывается правой кнопкой мыши по Кицу или значку рядом с часами.
+          Мячик, косточка и кабанчик остаются на рабочем столе вместе.
+          Перетащите и отпустите любую игрушку, чтобы Кицу снова с ней поиграла.
+          «Убрать все игрушки» убирает их с рабочего стола.
+          Клик по кормушке выдаёт корм; кормления по часам ПК — в 10:00, 17:00, 22:00.
+          «Место» — лежать в лежанке, «Иди спать» — спать в лежанке.
+          Лежанку и кормушку можно перетаскивать.
+          Журнал ошибок: %LocalAppData%\Kitsu\kitsu-error.txt
+          '@ | Set-Content -LiteralPath $taskRu -Encoding utf8NoBOM
+          $taskZip = Join-Path $taskDist 'Kitsu-windows-x64.zip'
+          Compress-Archive -LiteralPath @($taskExe,$taskEn,$taskRu) -DestinationPath $taskZip -CompressionLevel Optimal
+          $taskHashes = @("$((Get-FileHash -LiteralPath $taskZip -Algorithm SHA256).Hash.ToLowerInvariant())  Kitsu-windows-x64.zip", "$((Get-FileHash -LiteralPath $taskExe -Algorithm SHA256).Hash.ToLowerInvariant())  Kitsu.exe")
+          $taskHashes | Set-Content -LiteralPath (Join-Path $taskDist 'SHA256SUMS-win-x64.txt') -Encoding utf8NoBOM
+      - uses: actions/upload-artifact@v7
+        with:
+          name: kitsu-windows-x64
+          path: artifacts/distribution/*
+          if-no-files-found: error
+          compression-level: 0
+          retention-days: 14
+
+  macos:
+    name: macOS ${{ matrix.rid }} — signed bundle and native launch
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - rid: osx-arm64
+            runner: macos-15
+          - rid: osx-x64
+            runner: macos-15-intel
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ inputs.release_tag || github.ref }}
+          persist-credentials: false
+      - uses: actions/setup-dotnet@v6
+        with:
+          dotnet-version: '10.0.x'
+      - name: Publish, package, sign and launch natively
+        shell: bash
+        run: bash macOS/build-macos.sh '${{ matrix.rid }}' "$GITHUB_WORKSPACE/artifacts/distribution"
+      - uses: actions/upload-artifact@v7
+        with:
+          name: kitsu-${{ matrix.rid }}
+          path: |
+            artifacts/distribution/Kitsu-macos-*.zip
+            artifacts/distribution/SHA256SUMS-*.txt
+          if-no-files-found: error
+          compression-level: 0
+          retention-days: 14
+
+  distribution:
+    name: Verify all three packages and publish release assets
+    needs: [windows, macos]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v8
+        with:
+          pattern: kitsu-*
+          path: distribution
+          merge-multiple: true
+      - name: Verify archives and make the combined checksum file
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          import hashlib, zipfile
+          root = Path('distribution')
+          expected = ('Kitsu-windows-x64.zip', 'Kitsu-macos-arm64.zip', 'Kitsu-macos-x64.zip')
+          entries = {}
+          for checksum in sorted(root.glob('SHA256SUMS-*.txt')):
+              for line in checksum.read_text(encoding='utf-8-sig').splitlines():
+                  digest, name = line.split(None, 1)
+                  entries[name.strip()] = digest
+          for name in expected:
+              path = root / name
+              if not path.is_file() or path.stat().st_size < 1000000:
+                  raise RuntimeError(f'Missing or unexpectedly small archive: {name}')
+              with path.open('rb') as stream:
+                  digest = hashlib.file_digest(stream, 'sha256').hexdigest()
+              if entries.get(name) != digest:
+                  raise RuntimeError(f'Checksum mismatch: {name}')
+              with zipfile.ZipFile(path) as archive:
+                  if name.startswith('Kitsu-macos'):
+                      item = archive.getinfo('Kitsu.app/Contents/MacOS/Kitsu')
+                      if not ((item.external_attr >> 16) & 0o111):
+                          raise RuntimeError(f'Executable permissions lost: {name}')
+                      if 'Kitsu.app/Contents/Info.plist' not in archive.namelist():
+                          raise RuntimeError(f'App bundle missing: {name}')
+                  else:
+                      if sorted(archive.namelist()) != sorted(('Kitsu.exe', 'START-HERE.txt', 'ПРОЧТИ-МЕНЯ.txt')):
+                          raise RuntimeError('Unexpected Windows archive contents')
+                      with archive.open('Kitsu.exe') as stream:
+                          digest = hashlib.file_digest(stream, 'sha256').hexdigest()
+                      if entries.get('Kitsu.exe') != digest:
+                          raise RuntimeError('Windows executable checksum mismatch')
+          names = (*expected, 'Kitsu.exe')
+          (root / 'SHA256SUMS.txt').write_text(''.join(f'{entries[name]}  {name}\n' for name in names), encoding='utf-8')
+          print((root / 'SHA256SUMS.txt').read_text())
+          PY
+      - uses: actions/upload-artifact@v7
+        with:
+          name: kitsu-downloads
+          path: |
+            distribution/Kitsu-*.zip
+            distribution/SHA256SUMS.txt
+          if-no-files-found: error
+          compression-level: 0
+          retention-days: 14
+      - name: Attach the verified downloads to the existing GitHub release
+        if: env.RELEASE_TAG != ''
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release view "$RELEASE_TAG" --repo "$GITHUB_REPOSITORY" --json tagName --jq .tagName
+          gh release upload "$RELEASE_TAG" \
+            distribution/Kitsu-windows-x64.zip \
+            distribution/Kitsu-macos-arm64.zip \
+            distribution/Kitsu-macos-x64.zip \
+            distribution/SHA256SUMS.txt \
+            --repo "$GITHUB_REPOSITORY" --clobber

@@ -1,0 +1,54 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net10.0</TargetFramework>
+    <AssemblyName>Kitsu</AssemblyName>
+    <RootNamespace>KitsuDesktop.Mac</RootNamespace>
+    <Version>7.0.0</Version>
+    <Description>Kitsu, an animated Schipperke desktop companion for macOS</Description>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>disable</Nullable>
+    <SelfContained>true</SelfContained>
+    <PublishSingleFile>false</PublishSingleFile>
+    <PublishTrimmed>false</PublishTrimmed>
+    <DebugType>none</DebugType>
+    <DebugSymbols>false</DebugSymbols>
+    <AvaloniaUseCompiledBindingsByDefault>true</AvaloniaUseCompiledBindingsByDefault>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="Avalonia.Desktop" Version="11.3.13" />
+    <PackageReference Include="Avalonia.Themes.Fluent" Version="11.3.13" />
+    <!-- Avalonia's optional Linux backend requests 0.21.2. Keep its compatible
+         security backport patched even though this application targets macOS. -->
+    <PackageReference Include="Tmds.DBus.Protocol" Version="0.21.3" />
+  </ItemGroup>
+  <ItemGroup>
+    <EmbeddedResource Include="..\assets\kitsu-atlas.png" LogicalName="Kitsu.Atlas" />
+    <EmbeddedResource Include="..\assets\kitsu-gait.png" LogicalName="Kitsu.Gait" />
+    <EmbeddedResource Include="..\assets\kitsu-spin.png" LogicalName="Kitsu.Spin" />
+    <EmbeddedResource Include="..\assets\kitsu-tail.png" LogicalName="Kitsu.Tail" />
+    <EmbeddedResource Include="..\assets\kitsu-transitions.png" LogicalName="Kitsu.Transitions" />
+    <EmbeddedResource Include="..\assets\kitsu-comfort.png" LogicalName="Kitsu.Comfort" />
+    <EmbeddedResource Include="..\assets\kitsu-chew.png" LogicalName="Kitsu.Chew" />
+    <EmbeddedResource Include="..\assets\kitsu-ground.png" LogicalName="Kitsu.Ground" />
+    <EmbeddedResource Include="..\assets\kitsu-posture.png" LogicalName="Kitsu.Posture" />
+    <EmbeddedResource Include="..\assets\kitsu-paws.png" LogicalName="Kitsu.Paws" />
+    <EmbeddedResource Include="..\assets\kitsu-ambient.png" LogicalName="Kitsu.Ambient" />
+    <EmbeddedResource Include="..\assets\kitsu-rest-voice.png" LogicalName="Kitsu.RestVoice" />
+    <EmbeddedResource Include="..\assets\kitsu-ball-play.png" LogicalName="Kitsu.BallPlay" />
+    <EmbeddedResource Include="..\assets\kitsu-boar-play.png" LogicalName="Kitsu.BoarPlay" />
+    <EmbeddedResource Include="..\assets\kitsu-bone-play.png" LogicalName="Kitsu.BonePlay" />
+    <EmbeddedResource Include="..\assets\kitsu-toy-chew.png" LogicalName="Kitsu.ToyChew" />
+    <EmbeddedResource Include="..\assets\kitsu-ball-shake.png" LogicalName="Kitsu.BallShake" />
+    <EmbeddedResource Include="..\assets\kitsu-boar-shake.png" LogicalName="Kitsu.BoarShake" />
+    <EmbeddedResource Include="..\assets\kitsu-bed-v6.png" LogicalName="Kitsu.Bed" />
+    <EmbeddedResource Include="..\assets\kitsu-feeder-v6.png" LogicalName="Kitsu.Feeder" />
+    <EmbeddedResource Include="..\assets\kitsu-carry-ball-v6.png" LogicalName="Kitsu.CarryBall" />
+    <EmbeddedResource Include="..\assets\kitsu-carry-bone-v6.png" LogicalName="Kitsu.CarryBone" />
+    <EmbeddedResource Include="..\assets\kitsu-carry-boar-v6.png" LogicalName="Kitsu.CarryBoar" />
+    <EmbeddedResource Include="..\assets\kitsu-settle-ball-v6.png" LogicalName="Kitsu.SettleBall" />
+    <EmbeddedResource Include="..\assets\kitsu-settle-bone-v6.png" LogicalName="Kitsu.SettleBone" />
+    <EmbeddedResource Include="..\assets\kitsu-settle-boar-v6.png" LogicalName="Kitsu.SettleBoar" />
+    <EmbeddedResource Include="..\assets\kitsu-meals-v6.png" LogicalName="Kitsu.Meals" />
+  </ItemGroup>
+</Project>

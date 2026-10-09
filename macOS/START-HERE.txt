@@ -1,0 +1,16 @@
+Kitsu for macOS 14 or later — standalone .NET 10 application
+
+Choose Kitsu-macos-arm64.zip for Apple silicon (M1/M2/M3/M4 or newer).
+Choose Kitsu-macos-x64.zip for an Intel Mac.
+Extract the ZIP, move Kitsu.app into Applications, and open it.
+No .NET installation is required. Right-click Kitsu to see commands and toys.
+Click the feeder to give food. Drag the bed, feeder and toys to position them.
+
+This community build is ad-hoc signed, without Apple Developer ID notarization.
+If macOS blocks the first launch, try opening it, then go to System Settings >
+Privacy & Security > Open Anyway and confirm this specific downloaded app.
+Do not disable Gatekeeper. Apple instructions:
+https://support.apple.com/en-us/102445
+
+App data and error logs: ~/Library/Application Support/Kitsu
+Windows desktop-icon interaction is available in the Windows build only.

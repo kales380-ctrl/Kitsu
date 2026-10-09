@@ -100,6 +100,7 @@ namespace KitsuDesktop {
         static readonly Atlas ground=new Atlas("Kitsu.Ground"),posture=new Atlas("Kitsu.Posture"),paws=new Atlas("Kitsu.Paws"),ambient=new Atlas("Kitsu.Ambient"),restVoice=new Atlas("Kitsu.RestVoice");
         static readonly Atlas ballPlay=new Atlas("Kitsu.BallPlay"),boarPlay=new Atlas("Kitsu.BoarPlay"),bonePlay=new Atlas("Kitsu.BonePlay"),toyChew=new Atlas("Kitsu.ToyChew"),ballShake=new Atlas("Kitsu.BallShake"),boarShake=new Atlas("Kitsu.BoarShake");
         static readonly Atlas carryBall=new Atlas("Kitsu.CarryBall"),carryBone=new Atlas("Kitsu.CarryBone"),carryBoar=new Atlas("Kitsu.CarryBoar"),meals=new Atlas("Kitsu.Meals");
+        static readonly Atlas settleBall=new Atlas("Kitsu.SettleBall"),settleBone=new Atlas("Kitsu.SettleBone"),settleBoar=new Atlas("Kitsu.SettleBoar");
         static readonly float walkFit=gait.Fit(0,8,198,148),runFit=gait.Fit(8,8,198,148),spinFit=spin.Fit(0,16,198,148),tailFit=tail.Fit(0,16,198,148);
         static readonly float jumpFit=transitions.Fit(0,8,198,145),deadFit=transitions.Fit(8,8,198,148),pickupFit=comfort.Fit(0,8,198,148),petFit=comfort.Fit(8,8,198,148),chewFit=chew.Fit(0,16,198,96);
         static readonly float sitFit=ground.Fit(0,8,198,148),lieFit=ground.Fit(8,8,198,148),bowFit=posture.Fit(0,8,198,148),bunnyFit=posture.Fit(8,8,198,152);
@@ -108,7 +109,7 @@ namespace KitsuDesktop {
         static readonly float ballFit=ballPlay.Fit(0,16,198,148),boarFit=boarPlay.Fit(0,16,198,148),boneFit=bonePlay.Fit(0,16,198,148);
         static readonly float ballShakeFit=ballShake.Fit(0,16,198,148),boarShakeFit=boarShake.Fit(0,16,198,148),ballChewFit=toyChew.Fit(0,8,198,103),boarChewFit=toyChew.Fit(8,8,198,103);
         static readonly float carryBallFit=carryBall.Fit(0,16,198,148),carryBoneFit=carryBone.Fit(0,16,198,148),carryBoarFit=carryBoar.Fit(0,16,198,148),mealFit=meals.Fit(0,12,198,148),bedLieFit=meals.Fit(12,4,184,100);
-        static readonly float[] lieMouthX={170,170,172,170,175,172,171,165},lieMouthY={52,82,100,111,100,93,95,95};
+        static readonly float settleBallFit=settleBall.Fit(0,16,198,148),settleBoneFit=settleBone.Fit(0,16,198,148),settleBoarFit=settleBoar.Fit(0,16,198,148);
         static int Loop(double time,double duration,int count) { return (int)(Math.Max(0,time)%duration/duration*count)%count; }
         static int Stage(double time,double[] boundaries) { int index=0; while(index<boundaries.Length && time>=boundaries[index]) index++; return index; }
         static int Advance(double time,double duration,int count) { return Math.Min(count-1,(int)(Math.Max(0,time)/duration*count)); }
@@ -125,13 +126,16 @@ namespace KitsuDesktop {
         static float ToyFit(ToyKind kind) { return kind==ToyKind.Boar ? boarFit : kind==ToyKind.Bone ? boneFit : ballFit; }
         static Atlas CarryAtlas(ToyKind kind) { return kind==ToyKind.Boar ? carryBoar : kind==ToyKind.Bone ? carryBone : carryBall; }
         static float CarryFit(ToyKind kind) { return kind==ToyKind.Boar ? carryBoarFit : kind==ToyKind.Bone ? carryBoneFit : carryBallFit; }
+        static Atlas SettleAtlas(ToyKind kind) { return kind==ToyKind.Boar ? settleBoar : kind==ToyKind.Bone ? settleBone : settleBall; }
+        static float SettleFit(ToyKind kind) { return kind==ToyKind.Boar ? settleBoarFit : kind==ToyKind.Bone ? settleBoneFit : settleBallFit; }
         static string AtlasName(Atlas a) {
             if(a==gait) return "gait"; if(a==spin) return "spin"; if(a==tail) return "tail"; if(a==transitions) return "transition";
             if(a==comfort) return "comfort"; if(a==chew) return "bone-chew"; if(a==ground) return "ground"; if(a==posture) return "posture";
             if(a==paws) return "paw"; if(a==ambient) return "ambient"; if(a==restVoice) return "rest-voice";
             if(a==ballPlay) return "ball-play"; if(a==boarPlay) return "boar-play"; if(a==bonePlay) return "bone-play";
             if(a==ballShake) return "ball-shake"; if(a==boarShake) return "boar-shake";
-            if(a==carryBall) return "carry-ball"; if(a==carryBone) return "carry-bone"; if(a==carryBoar) return "carry-boar"; if(a==meals) return "meals"; return "toy-chew";
+            if(a==carryBall) return "carry-ball"; if(a==carryBone) return "carry-bone"; if(a==carryBoar) return "carry-boar"; if(a==meals) return "meals";
+            if(a==settleBall) return "settle-ball"; if(a==settleBone) return "settle-bone"; if(a==settleBoar) return "settle-boar"; return "toy-chew";
         }
         static Atlas Select(Mood mood,double time,ToyKind kind,double duration,out int frame,out float fit,out float hop) {
             Atlas atlas=null; frame=0;fit=1;hop=0;
@@ -174,8 +178,12 @@ namespace KitsuDesktop {
                 case Mood.Pet: atlas=comfort;frame=8+PetIndex(time);fit=petFit;break;
                 case Mood.ToyPickup: atlas=CarryAtlas(kind);frame=Advance(time,.65,8);fit=CarryFit(kind);break;
                 case Mood.ToyCarry: atlas=CarryAtlas(kind);frame=8+Loop(time,.64,8);fit=CarryFit(kind);break;
-                case Mood.ToySettle: atlas=ground;frame=8+Advance(time,.95,8);fit=lieFit;break;
-                case Mood.ToyRise: atlas=ground;frame=15-Advance(time,.95,8);fit=lieFit;break;
+                case Mood.ToySettle:
+                    if(kind==ToyKind.None) { atlas=ground;frame=8+Advance(time,.95,8);fit=lieFit; }
+                    else { atlas=SettleAtlas(kind);frame=Advance(time,.95,8);fit=SettleFit(kind); } break;
+                case Mood.ToyRise:
+                    if(kind==ToyKind.None) { atlas=ground;frame=15-Advance(time,.95,8);fit=lieFit; }
+                    else { atlas=SettleAtlas(kind);frame=8+Advance(time,.95,8);fit=SettleFit(kind); } break;
                 case Mood.ToyRoll: atlas=ToyAtlas(kind);frame=8+Loop(time,.5,4);fit=ToyFit(kind);break;
                 case Mood.ToyToss: atlas=ToyAtlas(kind);frame=12+Advance(time,.7,4);if(kind==ToyKind.None) frame=Math.Max(14,frame);fit=ToyFit(kind);break;
                 case Mood.ToyShake:
@@ -207,12 +215,8 @@ namespace KitsuDesktop {
                 bool front=mood==Mood.PawLeft || mood==Mood.PawRight || mood==Mood.Bunny || mood==Mood.Sit || mood==Mood.RiseSit || mood==Mood.BedLie && time>=.95;
                 if(!right && !front) { g.TranslateTransform(208,0);g.ScaleTransform(-1,1); }
                 g.DrawImage(pose,new RectangleF((208-w)/2,156-h-hop,w,h));
-                // Pickup and carry sprites already contain the object between
-                // upper/lower jaws. No toy is painted over a closed muzzle.
-                if((mood==Mood.ToySettle || mood==Mood.ToyRise) && kind!=ToyKind.None) {
-                    int phase=frame-8;float toyWidth=kind==ToyKind.Bone ? 34 : 29;
-                    ToyArt.Draw(g,kind,new RectangleF(lieMouthX[phase]-toyWidth/2,lieMouthY[phase]-12,toyWidth,24));
-                }
+                // Toys are part of the pickup, carry, settling and rising poses,
+                // held between the upper and lower jaws throughout the movement.
             }
             return output;
         }
@@ -258,7 +262,7 @@ namespace KitsuDesktop {
             if(FrameKey(Mood.Bow,4.999)!=FrameKey(Mood.Bow,0)) throw new Exception("Bow does not return to standing");
             AssertPhases(Mood.FeedLower,ToyKind.None,1,4);AssertPhases(Mood.FeedChew,ToyKind.None,2.4,4);AssertPhases(Mood.FeedRaise,ToyKind.None,1,4);
             AssertPhases(Mood.BedLie,ToyKind.None,3.35,12);
-            Console.WriteLine("PASS: 336 generated animation poses, 16-view turns, 8-phase commands and reverse recovery; mouth-grip pickup/carry for three toys, meal phases and attentive bed rest.");
+            Console.WriteLine("PASS: generated animation poses, 16-view turns, 8-phase commands and reverse recovery; mouth-grip pickup/carry/settling/rising for three toys, meal phases and attentive bed rest.");
         }
         static void AssertPhases(Mood mood,ToyKind kind,double span,int needed) {
             HashSet<string> keys=new HashSet<string>();

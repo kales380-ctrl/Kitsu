@@ -1,20 +1,24 @@
-# Kitsu · desktop Schipperke · v6.0.1
+# Kitsu · desktop Schipperke · v7.0.0
+
+Version 7 adds macOS builds for Apple Silicon and Intel alongside Windows. It also adds 48 illustrated lying-down and standing-up poses with the ball, bone and boar securely gripped between the jaws throughout the motion.
 
 Version 6.0.1 fixes desktop window layering: Kitsu rests inside the bed and eats in front of the feeder, including after dragging furniture or switching always-on-top.
 
 [Русская инструкция](README.ru.md)
 
-Kitsu is an attentive, playful female Schipperke who lives on your Windows desktop. She has fluffy black fur, brown eyes and a pink collar, with 352 illustrated poses and genuine transparent edges.
+Kitsu is an attentive, playful female Schipperke who lives on your Windows or macOS desktop. She has fluffy black fur, brown eyes and a pink collar, with 400 illustrated poses and genuine transparent edges.
 
 ![Kitsu and her commands](docs/kitsu-preview-v4.png)
 
 ## Download and run
 
-**[Download Kitsu v6 for Windows x64](https://github.com/kales380-ctrl/Kitsu/releases/latest/download/Kitsu-windows-x64.zip)**
+**[Download Kitsu for Windows x64](https://github.com/kales380-ctrl/Kitsu/releases/latest/download/Kitsu-windows-x64.zip)**
 
-Extract the ZIP and open **Kitsu.exe** on Windows 10/11 x64. Version 6 runs on .NET 10 and includes the runtime and every animation image in a self-contained executable. You do not need to install .NET or the SDK to run the downloaded package. No installer or Internet connection is needed after downloading. The current menus are in Russian.
+Extract the ZIP and open **Kitsu.exe** on Windows 10/11 x64. The Windows version runs on .NET 10 and includes the runtime and every animation image in a self-contained executable. You do not need to install .NET or the SDK to run the downloaded package. No installer or Internet connection is needed after downloading. The current menus are in Russian.
 
-The archive's SHA-256 checksum is in [downloads/SHA256SUMS.txt](downloads/SHA256SUMS.txt).
+Download [macOS for Apple Silicon](https://github.com/kales380-ctrl/Kitsu/releases/latest/download/Kitsu-macos-arm64.zip) or [macOS for Intel](https://github.com/kales380-ctrl/Kitsu/releases/latest/download/Kitsu-macos-x64.zip). Requires macOS 14 or later. Extract the ZIP, move **Kitsu.app** to Applications and open it. The .NET 10 runtime and all artwork are included. The app has an ad-hoc signature, without Apple notarization. If macOS blocks the first launch, use the app-specific **System Settings → Privacy & Security → Open Anyway** option described in [Apple’s instructions](https://support.apple.com/en-us/102445).
+
+The SHA-256 checksums are attached to the [release](https://github.com/kales380-ctrl/Kitsu/releases/latest). macOS supports the dog commands, toys, bed and timed feeder; Explorer icon play is available on Windows only.
 
 If Kitsu cannot start or encounters an error, it displays a message and writes details to `%LocalAppData%\Kitsu\kitsu-error.txt`. Paste that path into Explorer's address bar to open the log. If the location is unavailable, it falls back to `%TEMP%\Kitsu\kitsu-error.txt`. Include the error details when reporting an issue.
 
@@ -27,13 +31,15 @@ If Kitsu cannot start or encounters an error, it displays a message and writes d
 
 She walks, runs, sniffs, sleeps, jumps and chases her tail. Commands include bow, jump, bark, spin, give a random front paw, sit pretty, sit, lie down and play dead. Sit pretty holds for 5–15 seconds; sitting and lying continue until another command. Intermediate frames show her lowering, lifting and rolling her body rather than rotating a flat picture.
 
-Give her a ball, bone or her favourite little rubber boar. She picks toys up in her mouth, carries them, shakes her head with them in her teeth, rolls them with her front paws, tosses them and lies down to chew. Games alternate activities for about three minutes. The toy stays on the desktop afterwards and can be thrown again.
+Give her a ball, bone or her favourite little rubber boar. She picks toys up in her mouth, carries them, shakes her head with them in her teeth, rolls them with her front paws, tosses them and lies down to chew. Games alternate activities for about three minutes. The ball, bone and boar stay on the desktop together. Selecting a different kind leaves the previous toy in place; selecting the same kind reuses it. Drag and release any toy to call Kitsu back to it. Choose «Убрать все игрушки» to remove them all.
 
 The menu includes following the mouse, pause, sound, size, monitor selection and always-on-top. Close Kitsu through her menu or tray icon.
 
 ## Bed and feeder
 
 ![Kitsu at home and carrying toys](docs/kitsu-home-v6.png)
+
+Feeding poses keep all front paws outside the bowl while the lowered muzzle reaches the food. Near a screen edge, Kitsu approaches from the side with room for her body.
 
 Kitsu has a grey fabric bed with a plush cushion, and a food dispenser with a reservoir, portion outlet and metal bowl. Drag either object to move it; their positions are remembered. Clicking the bed sends Kitsu to rest there. **Place / Место** makes her approach and lie awake facing you. **Go to sleep / Иди спать** always sends her to sleep in the bed. Her spontaneous naps choose randomly between the bed and the desktop.
 
@@ -45,7 +51,7 @@ All three toys now have eight pickup poses and eight walking poses with the obje
 
 ## Desktop icons
 
-Occasional icon play is enabled initially and can be disabled in the menu. Kitsu may briefly move a desktop icon when the desktop is foreground. Returning it to its original position is enabled by default.
+On Windows, occasional icon play is enabled initially and can be disabled in the menu. Kitsu may briefly move a desktop icon when the desktop is foreground. Returning it to its original position is enabled by default.
 
 This feature changes only Explorer's desktop icon positions. It does not open, launch, rename, delete or alter the represented files. It skips automatically arranged icons and stops if you move the selected icon yourself. No Explorer settings are changed.
 
@@ -59,7 +65,15 @@ Install the [Windows .NET 10 SDK](https://dotnet.microsoft.com/en-us/download/do
 .\build.ps1
 ```
 
-The script publishes `artifacts\win-x64\Kitsu.exe` from `Kitsu.csproj`, targeting `net10.0-windows`. The first build restores .NET packages and needs Internet access. It embeds 24 artwork resources (22 dog atlases, the bed and the feeder) and the .NET runtime using [Microsoft's self-contained single-file deployment](https://learn.microsoft.com/en-us/dotnet/core/deploying/single-file/overview). The published executable runs without a separately installed runtime or SDK.
+The script publishes `artifacts\win-x64\Kitsu.exe` from `Kitsu.csproj`, targeting `net10.0-windows`. The first build restores .NET packages and needs Internet access. It embeds 27 artwork resources (25 dog atlases, the bed and the feeder) and the .NET runtime using [Microsoft's self-contained single-file deployment](https://learn.microsoft.com/en-us/dotnet/core/deploying/single-file/overview). The published executable runs without a separately installed runtime or SDK.
+
+On a Mac with the .NET 10 SDK installed:
+
+```bash
+bash macOS/build-macos.sh osx-arm64
+# Intel Mac:
+bash macOS/build-macos.sh osx-x64
+```
 
 ## Verification and animation sheets
 
@@ -75,11 +89,13 @@ See [command and toy storyboards](docs/kitsu-commands-v4.png), [walking, running
 
 ## Project layout
 
+- macOS/ — .NET 10 Avalonia frontend, Skia rendering and Mac app bundle packaging.
+- .github/workflows/release.yml — native Windows and macOS builds, checks and release assets.
 - src/ — Windows Forms behavior, per-pixel windows, sprite rendering and desktop icon adapter.
 - assets/ — original sprite atlases and generation prompts.
 - Kitsu.csproj / build.ps1 — .NET 10 project and self-contained publishing script.
 - qa/ — behavior checks and visual diagnostics.
 - docs/ — illustrated animation previews.
-- downloads/ — portable Windows package and checksum.
+- downloads/ — links to the release packages and checksums.
 
 Report bugs and ideas through this repository's Issues.

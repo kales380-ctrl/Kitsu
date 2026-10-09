@@ -1,5 +1,7 @@
 using System;
 using System.Drawing;
+using System.Drawing.Drawing2D;
+using System.Drawing.Imaging;
 using System.Reflection;
 using System.Windows.Forms;
 namespace KitsuDesktop {
@@ -9,8 +11,57 @@ namespace KitsuDesktop {
   static void Set(object o,string name,object value) { o.GetType().GetField(name,F).SetValue(o,value); }
   static void Call(object o,string name,params object[] args) { try { o.GetType().GetMethod(name,F).Invoke(o,args); } catch(TargetInvocationException e) { throw e.InnerException; } }
   static void Assert(bool pass,string message) { if(!pass) throw new Exception(message); }
+  // The selected embedded pose is the visual oracle: an additional toy overlay
+  // changes these pixels even if the state machine still holds the same toy.
+  static void MouthTransitionRendering() {
+   MethodInfo select=typeof(PixelDog).GetMethod("Select",BindingFlags.Static|BindingFlags.NonPublic);
+   System.Collections.Generic.HashSet<string> keys=new System.Collections.Generic.HashSet<string>();
+   System.Collections.Generic.HashSet<object> atlases=new System.Collections.Generic.HashSet<object>();
+   foreach(ToyKind kind in new [] {ToyKind.Ball,ToyKind.Bone,ToyKind.Boar}) {
+    object toyAtlas=null;
+    foreach(Mood state in new [] {Mood.ToySettle,Mood.ToyRise}) {
+     System.Collections.Generic.HashSet<string> drawings=new System.Collections.Generic.HashSet<string>();
+     for(int phase=0;phase<8;phase++) {
+     double time=.95*(phase+.5)/8;
+     string key=PixelDog.FrameKey(state,time,kind,.95);
+     Assert(!key.StartsWith("ground:"),"Toy posture uses closed-mouth ground drawing: "+kind+" "+state);
+     Assert(keys.Add(key),"Missing distinct mouth-grip pose: "+kind+" "+state+" "+phase);
+     object[] args={state,time,kind,.95,0,0f,0f}; object atlas=select.Invoke(null,args);
+     if(toyAtlas==null) { toyAtlas=atlas; Assert(atlases.Add(atlas),"Different toy kinds share one mouth-grip atlas: "+kind); }
+     Assert(Object.ReferenceEquals(toyAtlas,atlas),"Toy changes sprite scale/atlas while settling and rising: "+kind);
+     Bitmap[] poses=(Bitmap[])atlas.GetType().GetField("Frames").GetValue(atlas);
+     Bitmap pose=poses[(int)args[4]]; float fit=(float)args[5],hop=(float)args[6];
+     foreach(bool right in new [] {true,false}) using(Bitmap actual=PixelDog.Draw(state,time,right,false,0,kind,.95)) using(Bitmap expected=new Bitmap(208,176,PixelFormat.Format32bppPArgb)) {
+      using(Graphics g=Graphics.FromImage(expected)) {
+       g.Clear(Color.Transparent); g.InterpolationMode=InterpolationMode.HighQualityBicubic; g.PixelOffsetMode=PixelOffsetMode.HighQuality; g.SmoothingMode=SmoothingMode.AntiAlias;
+       if(!right) { g.TranslateTransform(208,0);g.ScaleTransform(-1,1); }
+       float w=pose.Width*fit,h=pose.Height*fit;
+       g.DrawImage(pose,new RectangleF((208-w)/2,156-h-hop,w,h));
+      }
+      int visible=0; var hash=new System.Text.StringBuilder();
+      for(int y=0;y<actual.Height;y++) for(int x=0;x<actual.Width;x++) {
+       Color pixel=actual.GetPixel(x,y);
+       if(pixel.ToArgb()!=expected.GetPixel(x,y).ToArgb()) throw new Exception("Extra foreground layer on mouth-grip sprite: "+kind+" "+state+" "+phase+" "+(right ? "right" : "left")+" at "+x+","+y);
+       if(pixel.A>90) visible++;
+       if(right) hash.Append(pixel.ToArgb()).Append(',');
+      }
+      Assert(visible>500,"Mouth-grip pose disappeared: "+kind+" "+state+" "+phase);
+      if(right) Assert(drawings.Add(hash.ToString()),"Posture frame repeats identical artwork: "+kind+" "+state+" "+phase);
+     }
+    }
+     Assert(drawings.Count==8,"Posture sequence does not contain 8 visible poses: "+kind+" "+state);
+    }
+   }
+   Assert(keys.Count==48 && atlases.Count==3,"Mouth-grip transition coverage incomplete");
+   // An interrupted/released toy must not remain painted in the mouth.
+   foreach(Mood state in new [] {Mood.ToySettle,Mood.ToyRise}) for(int phase=0;phase<8;phase++) {
+    double time=.95*(phase+.5)/8;
+    Assert(PixelDog.FrameKey(state,time,ToyKind.None,.95).StartsWith("ground:"),"Released toy leaves a mouth-grip drawing behind");
+   }
+  }
   [STAThread] static void Main() {
    Application.EnableVisualStyles(); Application.SetCompatibleTextRenderingDefault(false);
+   MouthTransitionRendering();
    Rectangle negative=new Rectangle(-1920,-200,1920,1040);
    foreach(ToyKind kind in new [] {ToyKind.Ball,ToyKind.Bone,ToyKind.Boar}) using(ToyForm toy=new ToyForm(true)) {
     toy.Kind=kind; toy.X=-1500; toy.Y=200; toy.VX=900; toy.VY=-600;
@@ -51,7 +102,7 @@ namespace KitsuDesktop {
     Call(pet,"RemoveToy"); Assert(Get(pet,"toy")==null && original.IsDisposed,"Remove did not clean toy window");
     pet.Close();
    }
-   Console.WriteLine("PASS: ball/bone/boar physics, alpha artwork, all 9 play states for each kind, stable toy identity, pet and command drops, timed lie-down and stand-up, timed single toss release, retained toys at play end, removal cleanup.");
+   Console.WriteLine("PASS: 48 distinct embedded mouth-grip settling/rising poses, no foreground overlay in either direction, empty-mouth fallback after release; ball/bone/boar physics, alpha artwork, all 9 play states for each kind, stable toy identity, pet and command drops, timed lie-down and stand-up, timed single toss release, retained toys at play end, removal cleanup.");
   }
  }
 }

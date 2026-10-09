@@ -80,6 +80,18 @@ namespace KitsuDesktop {
             }
             g.Restore(state);
         }
+        public static PointF FeedingPosition(RectangleF feederBounds,bool facingRight) {
+            // The front paws reach 55 px beyond the 104 px sprite centre. The
+            // bowl begins 38 px before its centre: leave room between those
+            // two silhouettes while the lowered muzzle reaches the near food.
+            float sx=feederBounds.Width/140f,sy=feederBounds.Height/230f;
+            return new PointF(feederBounds.X+feederBounds.Width*.5f+(facingRight ? -96 : 96)*sx,
+                feederBounds.Y+feederBounds.Height*.80f+15*sy);
+        }
+        public static RectangleF BowlBounds(RectangleF feederBounds) {
+            return new RectangleF(feederBounds.X+32*feederBounds.Width/140f,feederBounds.Y+150*feederBounds.Height/230f,
+                76*feederBounds.Width/140f,72*feederBounds.Height/230f);
+        }
         public static void Preview(string path) {
             using(Bitmap sheet=new Bitmap(1200,1000)) using(Graphics g=Graphics.FromImage(sheet)) using(Font label=new Font("Segoe UI",11)) using(Brush ink=new SolidBrush(Color.FromArgb(48,43,42))) {
                 g.Clear(Color.FromArgb(241,234,222)); g.SmoothingMode=SmoothingMode.AntiAlias; g.InterpolationMode=InterpolationMode.HighQualityBicubic;
@@ -95,7 +107,8 @@ namespace KitsuDesktop {
                     }
                 }
                 DrawFeeder(g,new RectangleF(1038,35,140,230),.65,.65);
-                using(Bitmap dog=PixelDog.Draw(Mood.FeedChew,.6,true,false,0,ToyKind.None)) g.DrawImage(dog,1038+70-65-104,35+230*.8f+15-156,208,176);
+                PointF feedingPoint=FeedingPosition(new RectangleF(1038,35,140,230),true);
+                using(Bitmap dog=PixelDog.Draw(Mood.FeedChew,.6,true,false,0,ToyKind.None)) g.DrawImage(dog,feedingPoint.X-104,feedingPoint.Y-156,208,176);
                 ToyKind[] kinds={ToyKind.Ball,ToyKind.Bone,ToyKind.Boar};
                 string[] toyTitles={"Мячик в пасти · 8 фаз ходьбы","Косточка в пасти · 8 фаз ходьбы","Кабанчик в пасти · 8 фаз ходьбы"};
                 for(int row=0;row<3;row++) {
@@ -141,6 +154,7 @@ namespace KitsuDesktop {
         public void ResizeObject(int scale) { ClientSize=Kind==HomeKind.Bed ? new Size(300*scale/4,200*scale/4) : new Size(140*scale/4,230*scale/4); Render(now); }
         public PointF RestPoint { get { return new PointF(Left+Width*.5f,Top+Height*.78f); } }
         public PointF BowlPoint { get { return new PointF(Left+Width*.5f,Top+Height*.80f); } }
+        public PointF FeedingPosition(bool facingRight) { return HomeArt.FeedingPosition(new RectangleF(Left,Top,Width,Height),facingRight); }
         public void ClampTo(Rectangle area) { Location=new Point(Math.Max(area.Left,Math.Min(area.Right-Width,Left)),Math.Max(area.Top,Math.Min(area.Bottom-Height,Top))); }
         public void Dispense(double time) { DispenseStart=time; DispenseUntil=time+2.2; Food=0; }
         public void Step(double time) { now=time; if(Kind==HomeKind.Feeder && time<DispenseUntil) Food=Math.Min(1,(time-DispenseStart)/1.7); Render(time); }

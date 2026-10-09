@@ -15,8 +15,28 @@ namespace KitsuDesktop {
         }
         static void Assert(bool pass,string why) { if(!pass) throw new Exception(why); }
         static void Advance(PetForm pet,double time) { Set(pet,"timeline",time); Call(pet,"TickHome",1.0/60,time); }
+        static void FeedingScreenEdges() {
+            foreach(int size in new[] {3,4,5}) foreach(bool rightEdge in new[] {false,true}) using(PetForm pet=new PetForm(true)) {
+                ((Timer)Get(pet,"timer")).Stop();
+                Set(pet,"scale",size); Call(pet,"ResizePet");
+                HomeObjectForm feeder=(HomeObjectForm)Get(pet,"feeder"); feeder.ResizeObject(size);
+                Rectangle work=(Rectangle)Get(pet,"area");
+                feeder.Location=new Point(rightEdge ? work.Right-feeder.Width : work.Left,work.Bottom-feeder.Height-8);
+                // Force the initially preferred approach onto the cramped side.
+                Set(pet,"x",(float)(rightEdge ? work.Right : work.Left));
+                Call(pet,"StartMeal");
+                bool direction=(bool)Get(pet,"foodRight");
+                Assert(direction==rightEdge,"Meal chose cramped side at screen edge, size "+size);
+                PointF stand=feeder.FeedingPosition(direction);
+                Set(pet,"x",stand.X); Set(pet,"y",stand.Y); Advance(pet,3);
+                Assert((Mood)Get(pet,"mood")==Mood.FeedLower,"Edge approach did not reach meal");
+                Call(pet,"Clamp");
+                Assert(Math.Abs((float)Get(pet,"x")-stand.X)<.01 && Math.Abs((float)Get(pet,"y")-stand.Y)<.01,"Screen clamp pushed paws back onto bowl");
+            }
+        }
         [STAThread] static void Main() {
             Application.EnableVisualStyles(); Application.SetCompatibleTextRenderingDefault(false);
+            FeedingScreenEdges();
             string directory=Path.Combine(AppDomain.CurrentDomain.BaseDirectory,"schedule-"+Guid.NewGuid().ToString("N"));
             string history=Path.Combine(directory,"meals.txt");
             try {
@@ -58,7 +78,8 @@ namespace KitsuDesktop {
                 Advance(pet,106);
                 Assert((Mood)Get(pet,"mood")==Mood.GoFood,"Waking didn't start approach to food");
                 bool right=(bool)Get(pet,"foodRight");
-                Set(pet,"x",feeder.BowlPoint.X+(right ? -65 : 65)); Set(pet,"y",feeder.BowlPoint.Y+15);
+                PointF diningPoint=feeder.FeedingPosition(right);
+                Set(pet,"x",diningPoint.X); Set(pet,"y",diningPoint.Y);
                 feeder.Step(107); Advance(pet,107);
                 Assert((Mood)Get(pet,"mood")==Mood.FeedLower,"Food approach skipped head lowering");
                 Advance(pet,108.01); Assert((Mood)Get(pet,"mood")==Mood.FeedChew,"No chewing stage");
