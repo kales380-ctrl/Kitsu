@@ -42,10 +42,18 @@ for task_rid in "${task_runtimes[@]}"; do
   mkdir -p -- "$task_bundle/Contents/MacOS" "$task_bundle/Contents/Resources"
   dotnet publish "$task_script_dir/Kitsu.Mac.csproj" \
     --configuration Release --runtime "$task_rid" --self-contained true \
-    -p:PublishSingleFile=false -p:PublishTrimmed=false -p:DebugType=none \
+    -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=false \
+    -p:UseAppHost=true -p:PublishTrimmed=false -p:DebugType=none \
     -p:DebugSymbols=false --output "$task_publish"
   ditto "$task_publish" "$task_bundle/Contents/MacOS"
   test -f "$task_bundle/Contents/MacOS/Kitsu"
+  # Managed PE assemblies are embedded in the apphost. Apple treats loose DLLs
+  # under MacOS as unsigned nested code, so refuse an incorrectly laid-out build.
+  task_loose_dll="$(find "$task_bundle/Contents/MacOS" -type f -iname '*.dll' -print -quit)"
+  if [[ -n "$task_loose_dll" ]]; then
+    printf 'Managed assembly must be embedded in the single-file apphost: %s\n' "$task_loose_dll" >&2
+    exit 1
+  fi
   chmod 755 "$task_bundle/Contents/MacOS/Kitsu"
   cat > "$task_bundle/Contents/Info.plist" <<PLIST
 <?xml version="1.0" encoding="UTF-8"?>
