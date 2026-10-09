@@ -302,6 +302,7 @@ namespace KitsuDesktop {
         string HomeDataPath(string name) { return Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),"Kitsu",name); }
         void InitializeHome() {
             bed=new HomeObjectForm(HomeKind.Bed,scale); feeder=new HomeObjectForm(HomeKind.Feeder,scale);
+            bed.Foreground=this; feeder.Foreground=this;
             meals=new MealSchedule(smoke ? null : HomeDataPath("meals.txt")); ResetHome();
             bed.Clicked=delegate { GoToBed(false,double.PositiveInfinity); };
             feeder.Clicked=delegate { StartMeal(); };
@@ -533,6 +534,7 @@ namespace KitsuDesktop {
                 }
             }
             Present(canvas);
+            bed.KeepBelow(this); feeder.KeepBelow(this);
             }
         }
         static bool IsSequence(Mood m) { return m!=Mood.Idle && m!=Mood.Sniff; }

@@ -18,4 +18,8 @@ $taskHomeCheck = Join-Path $taskTestOutput 'home\home-check.exe'
 & "$taskProject\build.ps1" -OutputPath $taskHomeCheck -Console -DotnetPath $DotnetPath -TestSource "$PSScriptRoot\HomeBehaviorTest.cs" -MainType KitsuDesktop.HomeBehaviorTest
 & $DotnetPath ([System.IO.Path]::ChangeExtension($taskHomeCheck,'.dll'))
 if ($LASTEXITCODE -ne 0) { throw 'Home and meal checks failed.' }
+$taskLayerCheck = Join-Path $taskTestOutput 'layers\layers-check.exe'
+& "$taskProject\build.ps1" -OutputPath $taskLayerCheck -Console -DotnetPath $DotnetPath -TestSource "$PSScriptRoot\HomeWindowLayersTest.cs" -MainType KitsuDesktop.HomeWindowLayersTest
+& $DotnetPath ([System.IO.Path]::ChangeExtension($taskLayerCheck,'.dll'))
+if ($LASTEXITCODE -ne 0) { throw 'Home window layer checks failed.' }
 

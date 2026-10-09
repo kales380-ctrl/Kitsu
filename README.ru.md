@@ -1,5 +1,7 @@
 # Кицу · версия 6 · .NET 10
 
+Версия 6.0.1 исправляет порядок окон: Кицу лежит внутри лежанки и ест перед кормушкой, в том числе после перемещения предметов и переключения «Поверх окон».
+
 [English](README.md) · [Скачать для Windows](https://github.com/kales380-ctrl/Kitsu/releases/latest/download/Kitsu-windows-x64.zip)
 
 ![Кицу](docs/kitsu-preview-v4.png)

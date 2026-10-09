@@ -113,6 +113,7 @@ namespace KitsuDesktop {
 
     sealed class HomeObjectForm : AlphaForm {
         public readonly HomeKind Kind;
+        public Form Foreground;
         public Action Clicked,Moved;
         public bool Dragging;
         public double DispenseUntil,DispenseStart,Food;
@@ -150,6 +151,7 @@ namespace KitsuDesktop {
                 if(Kind==HomeKind.Bed) HomeArt.DrawBed(g,new RectangleF(0,0,Width,Height));
                 else HomeArt.DrawFeeder(g,new RectangleF(0,0,Width,Height),time<DispenseUntil ? time-DispenseStart : -1,Food);
                 Present(canvas);
+                KeepBelow(Foreground);
             }
         }
     }

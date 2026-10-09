@@ -1,4 +1,6 @@
-# Kitsu · desktop Schipperke · v6
+# Kitsu · desktop Schipperke · v6.0.1
+
+Version 6.0.1 fixes desktop window layering: Kitsu rests inside the bed and eats in front of the feeder, including after dragging furniture or switching always-on-top.
 
 [Русская инструкция](README.ru.md)
 
