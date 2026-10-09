@@ -14,4 +14,8 @@ if ($LASTEXITCODE -ne 0) { throw 'Sprite/physics checks failed.' }
 & "$taskProject\build.ps1" -OutputPath $taskBehaviorCheck -Console -DotnetPath $DotnetPath -TestSource "$PSScriptRoot\ToyPlayTest.cs" -MainType KitsuDesktop.ToyPlayTest
 & $DotnetPath ([System.IO.Path]::ChangeExtension($taskBehaviorCheck,'.dll'))
 if ($LASTEXITCODE -ne 0) { throw 'Toy behavior checks failed.' }
+$taskHomeCheck = Join-Path $taskTestOutput 'home\home-check.exe'
+& "$taskProject\build.ps1" -OutputPath $taskHomeCheck -Console -DotnetPath $DotnetPath -TestSource "$PSScriptRoot\HomeBehaviorTest.cs" -MainType KitsuDesktop.HomeBehaviorTest
+& $DotnetPath ([System.IO.Path]::ChangeExtension($taskHomeCheck,'.dll'))
+if ($LASTEXITCODE -ne 0) { throw 'Home and meal checks failed.' }
 

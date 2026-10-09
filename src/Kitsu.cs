@@ -8,7 +8,7 @@ using System.IO;
 using System.Text;
 
 namespace KitsuDesktop {
-    enum Mood { Walk, Run, Idle, Sniff, Sleep, Jump, Chase, Play, Follow, Chew, Bow, Bark, Spin, PawLeft, PawRight, Bunny, Sit, Lie, Dead, IconPlay, Pet, ToyPickup, ToyCarry, ToyShake, ToyRoll, ToyToss, ToyChew, Wake, RiseSit, RiseLie, RiseDead, ToySettle, ToyRise }
+    enum Mood { Walk, Run, Idle, Sniff, Sleep, Jump, Chase, Play, Follow, Chew, Bow, Bark, Spin, PawLeft, PawRight, Bunny, Sit, Lie, Dead, IconPlay, Pet, ToyPickup, ToyCarry, ToyShake, ToyRoll, ToyToss, ToyChew, Wake, RiseSit, RiseLie, RiseDead, ToySettle, ToyRise, GoBed, BedLie, BedSleep, LeaveBed, GoFood, FeedLower, FeedChew, FeedRaise, LeaveFood, HomeRise }
 
     class ToyForm : AlphaForm {
         public float X,Y,VX,VY;
@@ -92,6 +92,12 @@ namespace KitsuDesktop {
         bool iconCarrying,manualIcon;
         Point iconOffset;
         readonly bool smoke;
+        HomeObjectForm bed,feeder;
+        MealSchedule meals;
+        int pendingMeals;
+        bool inBed,bedSleep,foodRight;
+        double bedDuration;
+        Mood homeNextMood,homeRiseMood;
         int ticks;
         public PetForm() : this(false) { }
         public PetForm(bool smokeTest) {
@@ -102,7 +108,7 @@ namespace KitsuDesktop {
             area=Screen.FromPoint(Cursor.Position).WorkingArea;
             x=area.Left+area.Width*.7f; y=area.Bottom-12; tx=x; ty=y;
             ResizePet(); SetMood(Mood.Idle,4); bubbleUntil=6;
-            BuildMenu(); ContextMenuStrip=menu;
+            BuildMenu(); ContextMenuStrip=menu; InitializeHome();
             using(Bitmap bmp=PixelDog.Draw(Mood.Idle,1,true,false,0)) {
                 IntPtr handle=bmp.GetHicon();
                 using(Icon temp=Icon.FromHandle(handle)) petIcon=(Icon)temp.Clone();
@@ -114,11 +120,11 @@ namespace KitsuDesktop {
             MouseDoubleClick+=delegate(object s,MouseEventArgs e) { if(e.Button==MouseButtons.Left) ThrowBall(); };
             clock.Restart(); last=0;
             timer.Interval=16; timer.Tick+=Tick; timer.Start();
-            Shown+=delegate { Render(); };
+            Shown+=delegate { bed.Show(); feeder.Show(); BringToFront(); Render(); };
             Microsoft.Win32.SystemEvents.DisplaySettingsChanged+=DisplayChanged;
         }
         [System.Runtime.InteropServices.DllImport("user32.dll")] static extern bool DestroyIcon(IntPtr h);
-        void DisplayChanged(object sender,EventArgs e) { if(!IsDisposed && IsHandleCreated) BeginInvoke((Action)delegate { area=Screen.FromPoint(new Point((int)x,(int)y)).WorkingArea; Clamp(); }); }
+        void DisplayChanged(object sender,EventArgs e) { if(!IsDisposed && IsHandleCreated) BeginInvoke((Action)delegate { area=Screen.FromPoint(new Point((int)x,(int)y)).WorkingArea; bed.ClampTo(Screen.FromPoint(bed.Location).WorkingArea); feeder.ClampTo(Screen.FromPoint(feeder.Location).WorkingArea); SaveHome(); Clamp(); }); }
         void BuildMenu() {
             var title=new ToolStripMenuItem("Кицу · шипперке ♀"); title.Enabled=false; menu.Items.Add(title);
             menu.Items.Add("Погладить ♥",null,delegate { Pet(); });
@@ -136,11 +142,15 @@ namespace KitsuDesktop {
             commands.DropDownItems.Add("Сидеть",null,delegate { Command(Mood.Sit,double.PositiveInfinity,"Сижу!"); });
             commands.DropDownItems.Add("Лежать",null,delegate { Command(Mood.Lie,double.PositiveInfinity,"Лежу!"); });
             commands.DropDownItems.Add("Умри",null,delegate { Command(Mood.Dead,10,"Лапки вверх!"); });
+            commands.DropDownItems.Add("Место",null,delegate { GoToBed(false,double.PositiveInfinity); });
+            commands.DropDownItems.Add("Иди спать",null,delegate { GoToBed(true,double.PositiveInfinity); });
             commands.DropDownItems.Add(new ToolStripSeparator());
             commands.DropDownItems.Add("Гулять / отменить команду",null,delegate { ResumeWalking(); });
             menu.Items.Add(commands);
             menu.Items.Add("Ловить хвост",null,delegate { Wake(); followItem.Checked=false; StopIcons(); SetMood(Mood.Chase,3.2); Speak("Сейчас поймаю!",2); });
-            menu.Items.Add("Спать / проснуться",null,delegate { DropHeldToy(); StopIcons(); if(mood==Mood.Sleep) { Wake(); Speak("Уже встала!",2); } else { followItem.Checked=false; SetMood(Mood.Sleep,double.PositiveInfinity); Speak("Спокойной ночи…",3); } });
+            menu.Items.Add("Покормить Кицу",null,delegate { StartMeal(); });
+            menu.Items.Add("Вернуть лежанку и кормушку на этот монитор",null,delegate { ResetHome(); SaveHome(); });
+            menu.Items.Add("Спать / проснуться",null,delegate { DropHeldToy(); StopIcons(); if(mood==Mood.Sleep || mood==Mood.BedSleep) { Wake(); Speak("Уже встала!",2); } else { followItem.Checked=false; SetMood(Mood.Sleep,double.PositiveInfinity); Speak("Спокойной ночи…",3); } });
             followItem.CheckOnClick=true; followItem.Click+=delegate { Wake(); StopIcons(); if(followItem.Checked) { RemoveToy(); SetMood(Mood.Follow,3600); Speak("Поиграем?",2); } else Choose(); }; menu.Items.Add(followItem);
             menu.Items.Add(new ToolStripSeparator());
             iconItem.Checked=!smoke; iconItem.CheckOnClick=true;
@@ -151,11 +161,11 @@ namespace KitsuDesktop {
             menu.Items.Add(new ToolStripSeparator());
             pauseItem.CheckOnClick=true; pauseItem.Click+=delegate { paused=pauseItem.Checked; if(paused) StopIcons(); }; menu.Items.Add(pauseItem);
             var top=new ToolStripMenuItem("Поверх окон"); top.Checked=true; top.CheckOnClick=true;
-            top.Click+=delegate { TopMost=top.Checked; if(toy!=null) toy.TopMost=TopMost; }; menu.Items.Add(top);
+            top.Click+=delegate { TopMost=top.Checked; if(toy!=null) toy.TopMost=TopMost; if(bed!=null) bed.TopMost=TopMost; if(feeder!=null) feeder.TopMost=TopMost; }; menu.Items.Add(top);
             var sizes=new ToolStripMenuItem("Размер");
-            foreach(int n in new int[] {3,4,5}) { int size=n; sizes.DropDownItems.Add(n==3 ? "Маленькая" : n==4 ? "Обычная" : "Крупная",null,delegate { scale=size; ResizePet(); Clamp(); }); }
+            foreach(int n in new int[] {3,4,5}) { int size=n; sizes.DropDownItems.Add(n==3 ? "Маленькая" : n==4 ? "Обычная" : "Крупная",null,delegate { scale=size; ResizePet(); bed.ResizeObject(scale); feeder.ResizeObject(scale); bed.ClampTo(Screen.FromControl(bed).WorkingArea); feeder.ClampTo(Screen.FromControl(feeder).WorkingArea); SaveHome(); Clamp(); }); }
             menu.Items.Add(sizes);
-            menu.Items.Add("На другой монитор",null,delegate { StopIcons(); RemoveToy(); Screen[] all=Screen.AllScreens; int idx=Array.FindIndex(all,s=>s.WorkingArea==area); area=all[(idx+1)%all.Length].WorkingArea; x=area.Left+area.Width/2; y=area.Bottom-12; Choose(); });
+            menu.Items.Add("На другой монитор",null,delegate { StopIcons(); RemoveToy(); Screen[] all=Screen.AllScreens; int idx=Array.FindIndex(all,s=>s.WorkingArea==area); area=all[(idx+1)%all.Length].WorkingArea; x=area.Left+area.Width/2; y=area.Bottom-12; inBed=false; ResetHome(); SaveHome(); Choose(); });
             menu.Items.Add("Как играть",null,delegate { Speak("Клик — ласка • два клика — мяч",5); });
             menu.Items.Add(new ToolStripSeparator()); menu.Items.Add("Закрыть Кицу",null,delegate { Close(); });
         }
@@ -163,12 +173,13 @@ namespace KitsuDesktop {
         void Place() { Location=new Point((int)x-ClientSize.Width/2,(int)y-(39*scale+48)); }
         void Clamp() { x=Math.Max(area.Left+26*scale,Math.Min(area.Right-26*scale,x)); y=Math.Max(area.Top+(mood==Mood.IconPlay ? 38*scale : 44*scale+48),Math.Min(area.Bottom-4,y)); Place(); }
         void Speak(string text,double seconds) { bubble=text; bubbleUntil=timeline+seconds; }
-        void SetMood(Mood m,double seconds) { if(!IsToySequence(m)) DropHeldToy(); previousMood=mood; previousAnimation=Math.Max(0,timeline-stateStart); mood=m; stateStart=timeline; until=stateStart+seconds; moving=false; }
+        void SetMood(Mood m,double seconds) { if(!IsToySequence(m)) DropHeldToy(); if(m!=Mood.BedLie && m!=Mood.BedSleep && m!=Mood.LeaveBed && m!=Mood.Wake) inBed=false; previousMood=mood; previousAnimation=Math.Max(0,timeline-stateStart); mood=m; stateStart=timeline; until=stateStart+seconds; moving=false; }
         void Command(Mood m,double seconds,string text) { Wake(); followItem.Checked=false; StopIcons(); DropHeldToy(); SetMood(m,seconds); Speak(text,Math.Min(3,seconds)); }
-        void Wake() { paused=false; pauseItem.Checked=false; if(mood==Mood.Sleep) SetMood(Mood.Wake,1.1); }
+        void Wake() { paused=false; pauseItem.Checked=false; if(mood==Mood.Sleep || mood==Mood.BedSleep) SetMood(Mood.Wake,1.1); }
         void ResumeWalking() {
             Wake(); StopIcons();
             if(mood==Mood.Sit) SetMood(Mood.RiseSit,.85);
+            else if(mood==Mood.BedLie) SetMood(Mood.LeaveBed,.95);
             else if(mood==Mood.Lie) SetMood(Mood.RiseLie,.95);
             else if(mood==Mood.Dead) SetMood(Mood.RiseDead,1.05);
             else if(mood!=Mood.Wake) Choose();
@@ -288,6 +299,101 @@ namespace KitsuDesktop {
                 else NextToyAction();
             }
         }
+        string HomeDataPath(string name) { return Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),"Kitsu",name); }
+        void InitializeHome() {
+            bed=new HomeObjectForm(HomeKind.Bed,scale); feeder=new HomeObjectForm(HomeKind.Feeder,scale);
+            meals=new MealSchedule(smoke ? null : HomeDataPath("meals.txt")); ResetHome();
+            bed.Clicked=delegate { GoToBed(false,double.PositiveInfinity); };
+            feeder.Clicked=delegate { StartMeal(); };
+            bed.Moved=SaveHome; feeder.Moved=SaveHome;
+            if(smoke) return;
+            try {
+                string[] values=File.ReadAllLines(HomeDataPath("home.txt")); int bx,by,fx,fy;
+                if(values.Length==4 && Int32.TryParse(values[0],out bx) && Int32.TryParse(values[1],out by) && Int32.TryParse(values[2],out fx) && Int32.TryParse(values[3],out fy)) {
+                    bed.Location=new Point(bx,by); feeder.Location=new Point(fx,fy);
+                    bed.ClampTo(Screen.FromPoint(bed.Location).WorkingArea); feeder.ClampTo(Screen.FromPoint(feeder.Location).WorkingArea);
+                }
+            } catch(IOException) { } catch(UnauthorizedAccessException) { }
+        }
+        void ResetHome() {
+            if(bed==null || feeder==null) return;
+            bed.Location=new Point(area.Left+25,area.Bottom-bed.Height-8);
+            feeder.Location=new Point(area.Right-feeder.Width-25,area.Bottom-feeder.Height-8);
+            bed.ClampTo(area); feeder.ClampTo(area); bed.Render(timeline); feeder.Render(timeline);
+        }
+        void SaveHome() {
+            if(smoke || bed==null || feeder==null || bed.IsDisposed || feeder.IsDisposed) return;
+            try {
+                string path=HomeDataPath("home.txt"); Directory.CreateDirectory(Path.GetDirectoryName(path));
+                File.WriteAllLines(path,new[] {bed.Left.ToString(),bed.Top.ToString(),feeder.Left.ToString(),feeder.Top.ToString()});
+            } catch(IOException) { } catch(UnauthorizedAccessException) { }
+        }
+        void GoToBed(bool sleep,double seconds) {
+            paused=false; pauseItem.Checked=false; StopIcons(); DropHeldToy(); followItem.Checked=false; toyPlayUntil=0;
+            bedSleep=sleep; bedDuration=seconds;
+            PrepareHomeTravel(Mood.GoBed);
+            Speak(sleep ? "Иду в свою лежанку спать…" : "Иду на место ♥",3);
+        }
+        static bool IsFeeding(Mood m) { return m==Mood.GoFood || m==Mood.FeedLower || m==Mood.FeedChew || m==Mood.FeedRaise || m==Mood.LeaveFood; }
+        static bool IsHomeAction(Mood m) { return m==Mood.HomeRise || m==Mood.GoBed || m==Mood.BedLie || m==Mood.BedSleep || m==Mood.LeaveBed || IsFeeding(m); }
+        bool FeedingActive() { return IsFeeding(mood) || mood==Mood.HomeRise && homeNextMood==Mood.GoFood; }
+        void PrepareHomeTravel(Mood destination) {
+            Mood old=mood;
+            if(old==Mood.Sleep || old==Mood.BedSleep || old==Mood.BedLie || old==Mood.Lie || old==Mood.Sit || old==Mood.Dead || old==Mood.ToyChew) {
+                homeNextMood=destination;
+                homeRiseMood=old==Mood.Sleep || old==Mood.BedSleep ? Mood.Wake : old==Mood.Sit ? Mood.RiseSit : old==Mood.Dead ? Mood.RiseDead : Mood.RiseLie;
+                bool restingInBed=inBed;
+                SetMood(Mood.HomeRise,homeRiseMood==Mood.Wake ? 1.1 : homeRiseMood==Mood.RiseDead ? 1.05 : .95); inBed=restingInBed;
+            } else SetMood(destination,double.PositiveInfinity);
+        }
+        void StartMeal() {
+            // A second click during the meal doesn't refill a bowl mid-bite.
+            if(FeedingActive()) return;
+            paused=false; pauseItem.Checked=false; StopIcons(); DropHeldToy(); followItem.Checked=false; toyPlayUntil=0;
+            foodRight=x<=feeder.BowlPoint.X;
+            feeder.Dispense(timeline); PrepareHomeTravel(Mood.GoFood);
+            Speak("Пора кушать!",3);
+        }
+        void TickHome(double dt,double now) {
+            if(mood==Mood.HomeRise) {
+                if(inBed) { PointF rest=bed.RestPoint; x=rest.X; y=rest.Y; }
+                if(now>=until) SetMood(homeNextMood,double.PositiveInfinity);
+            } else if(mood==Mood.GoBed) {
+                PointF rest=bed.RestPoint; MoveTowards(rest.X,rest.Y,210,dt);
+                if(Math.Abs(x-rest.X)<3 && Math.Abs(y-rest.Y)<3) {
+                    x=rest.X; y=rest.Y; right=true; SetMood(bedSleep ? Mood.BedSleep : Mood.BedLie,bedDuration); inBed=true;
+                    Speak(bedSleep ? "Спокойной ночи…" : "Я на месте. Смотрю на тебя ♥",3);
+                }
+            } else if(mood==Mood.BedLie || mood==Mood.BedSleep || mood==Mood.LeaveBed) {
+                PointF rest=bed.RestPoint; x=rest.X; y=rest.Y; inBed=true;
+                if(now>=until) {
+                    if(mood==Mood.BedSleep) SetMood(Mood.Wake,1.1);
+                    else if(mood==Mood.BedLie) SetMood(Mood.LeaveBed,.95);
+                    else { inBed=false; Choose(); }
+                }
+            } else if(mood==Mood.GoFood) {
+                PointF bowl=feeder.BowlPoint;
+                float targetX=bowl.X+(foodRight ? -65 : 65)*scale/4f;
+                float targetY=bowl.Y+15*scale/4f;
+                MoveTowards(targetX,targetY,230,dt);
+                if(Math.Abs(x-targetX)<3 && Math.Abs(y-targetY)<3 && now>=feeder.DispenseUntil) {
+                    x=targetX; y=targetY; right=foodRight; SetMood(Mood.FeedLower,.48);
+                }
+            } else if(mood==Mood.FeedLower || mood==Mood.FeedChew || mood==Mood.FeedRaise) {
+                PointF bowl=feeder.BowlPoint; x=bowl.X+(foodRight ? -65 : 65)*scale/4f; y=bowl.Y+15*scale/4f; right=foodRight;
+                if(mood==Mood.FeedChew) feeder.Food=Math.Max(0,1-(now-stateStart)/12);
+                if(now>=until) {
+                    if(mood==Mood.FeedLower) SetMood(Mood.FeedChew,12);
+                    else if(mood==Mood.FeedChew) { feeder.Food=0; SetMood(Mood.FeedRaise,.48); Speak("Спасибо, вкусно! ♥",2.5); }
+                    else {
+                        tx=Math.Max(area.Left+26*scale,Math.Min(area.Right-26*scale,x+(foodRight ? -170 : 170))); ty=Math.Min(area.Bottom-4,y+15);
+                        SetMood(Mood.LeaveFood,1.3);
+                    }
+                }
+            } else if(mood==Mood.LeaveFood) {
+                MoveTowards(tx,ty,160,dt); if(now>=until) Choose();
+            }
+        }
         void Choose() {
             if(followItem.Checked) { SetMood(Mood.Follow,3600); return; }
             if(toy!=null && timeline<toyPlayUntil) { StartToyFetch(); return; }
@@ -298,7 +404,8 @@ namespace KitsuDesktop {
             } else if(n<70) SetMood(Mood.Sniff,rng.Next(3,6));
             else if(n<78) SetMood(Mood.Chase,3.2);
             else if(n<85) SetMood(Mood.Jump,1.1);
-            else if(n<90) SetMood(Mood.Sleep,rng.Next(18,40));
+            else if(n<90) { if(rng.Next(2)==0) GoToBed(true,rng.Next(18,40)); else SetMood(Mood.Sleep,rng.Next(18,40)); }
+            else if(n<94) GoToBed(false,rng.Next(12,25));
             else SetMood(Mood.Idle,rng.Next(3,7));
         }
         void StopIcons() {
@@ -331,13 +438,20 @@ namespace KitsuDesktop {
             if(smoke && wall>3) { Program.WriteSmokeResult("PASS: "+ticks+" timer frames; per-pixel window rendered without errors."); Close(); return; }
             // One logical clock drives both poses and movement. Pausing or a busy UI
             // cannot skip a gait, the crouch before a jump, or the roll onto her back.
-            if(paused || dragging || menu.Visible) { Render(); return; }
+            if(!smoke) pendingMeals+=meals.Poll(DateTime.Now);
+            if(paused || dragging || bed.Dragging || feeder.Dragging || menu.Visible) { Render(); return; }
             timeline+=dt; double now=timeline; moving=false;
             // Recheck work area to respect taskbar and resolution changes.
             area=Screen.FromPoint(new Point((int)x,(int)y)).WorkingArea;
+            if(mood==Mood.GoBed) area=Screen.FromPoint(bed.Location).WorkingArea;
+            else if(mood==Mood.GoFood) area=Screen.FromPoint(feeder.Location).WorkingArea;
             if(toy!=null) toy.Step(dt,area);
+            feeder.Step(now);
+            if(pendingMeals>0 && !FeedingActive()) { pendingMeals--; StartMeal(); }
             if(iconItem.Checked && now>nextIcon && (mood==Mood.Idle || mood==Mood.Walk || mood==Mood.Sniff)) StartIcons(false);
-            if(mood==Mood.IconPlay && icons!=null) {
+            if(IsHomeAction(mood)) {
+                TickHome(dt,now);
+            } else if(mood==Mood.IconPlay && icons!=null) {
                 if(!manualIcon && !DesktopIcons.DesktopIsForeground()) StopIcons();
                 else {
                     MoveTowards(tx,ty,100,dt);
@@ -367,7 +481,8 @@ namespace KitsuDesktop {
             }
             if(now>until) {
                 if(mood==Mood.Pet && petResumePlay && toy!=null) { petResumePlay=false; StartToyFetch(); }
-                else if(mood==Mood.Sleep) SetMood(Mood.Wake,1.1);
+                else if(mood==Mood.Sleep || mood==Mood.BedSleep) SetMood(Mood.Wake,1.1);
+                else if(mood==Mood.BedLie) SetMood(Mood.LeaveBed,.95);
                 else if(mood==Mood.Dead) SetMood(Mood.RiseDead,1.05);
                 else if(!IsToySequence(mood)) { StopIcons(); Choose(); }
             }
@@ -384,7 +499,7 @@ namespace KitsuDesktop {
             int left=(ClientSize.Width-52*scale)/2,top=48;
             g.SmoothingMode=SmoothingMode.AntiAlias; g.InterpolationMode=InterpolationMode.HighQualityBicubic; g.PixelOffsetMode=PixelOffsetMode.HighQuality;
             Rectangle dogRect=new Rectangle(left,top,52*scale,44*scale);
-            Mood renderMood=mood==Mood.Follow && !moving ? Mood.Idle : mood;
+            Mood renderMood=mood==Mood.HomeRise ? homeRiseMood : (mood==Mood.Follow || mood==Mood.GoFood) && !moving ? Mood.Idle : mood;
             ToyKind renderToy=toy!=null && (toy.Held || mood==Mood.ToyToss) ? toy.Kind : ToyKind.None;
             // Fast motion uses its own consecutive poses, without double limbs from
             // blending unrelated gait frames. A short dissolve softens quiet changes.
@@ -401,6 +516,7 @@ namespace KitsuDesktop {
                     g.DrawImage(after,dogRect,0,0,after.Width,after.Height,GraphicsUnit.Pixel,opacity);
                 }
             } else using(Bitmap b=PixelDog.Draw(renderMood,anim,right,happy,p.X>x ? 1 : -1,renderToy,until-stateStart)) g.DrawImage(b,dogRect,0,0,b.Width,b.Height,GraphicsUnit.Pixel);
+            if(inBed) HomeArt.DrawBed(g,new RectangleF(bed.Left-Left,bed.Top-Top,bed.Width,bed.Height),true);
             if(now<happyUntil) {
                 using(Brush heart=new SolidBrush(Color.FromArgb(246,142,162))) {
                     int hx=left+32*scale,hy=top+1+(int)(Math.Sin(anim*3)*3);
@@ -421,9 +537,17 @@ namespace KitsuDesktop {
         }
         static bool IsSequence(Mood m) { return m!=Mood.Idle && m!=Mood.Sniff; }
         protected override void OnFormClosed(FormClosedEventArgs e) {
-            if(!closing) { closing=true; timer.Stop(); timer.Dispose(); StopIcons(); RemoveToy(); tray.Visible=false; tray.Dispose(); menu.Dispose(); petIcon.Dispose(); stopSignal.Dispose(); Microsoft.Win32.SystemEvents.DisplaySettingsChanged-=DisplayChanged; }
+            Cleanup();
             base.OnFormClosed(e);
         }
+        void Cleanup() {
+            if(closing) return;
+            closing=true; timer.Stop(); timer.Dispose(); StopIcons(); RemoveToy(); SaveHome();
+            if(bed!=null) bed.Dispose(); if(feeder!=null) feeder.Dispose();
+            tray.Visible=false; tray.Dispose(); menu.Dispose(); if(petIcon!=null) petIcon.Dispose(); stopSignal.Dispose();
+            Microsoft.Win32.SystemEvents.DisplaySettingsChanged-=DisplayChanged;
+        }
+        protected override void Dispose(bool disposing) { if(disposing) Cleanup(); base.Dispose(disposing); }
     }
 
     static class Program {
@@ -449,6 +573,7 @@ namespace KitsuDesktop {
             if(args.Length>0 && args[0]=="--preview") { Preview(args.Length>1 ? args[1] : "kitsu-preview.png"); return; }
             if(args.Length>0 && args[0]=="--sequence-preview") { PixelDog.SequencePreview(args.Length>1 ? args[1] : "kitsu-sequences.png"); return; }
             if(args.Length>0 && args[0]=="--commands-preview") { PixelDog.CommandsPreview(args.Length>1 ? args[1] : "kitsu-commands-v4.png"); return; }
+            if(args.Length>0 && args[0]=="--home-preview") { HomeArt.Preview(args.Length>1 ? args[1] : "kitsu-home-v6.png"); return; }
             if(args.Length>0 && args[0]=="--self-test") { SelfTest(); return; }
             if(args.Length>0 && args[0]=="--bark-preview") { BarkSound.Save(args.Length>1 ? args[1] : "bark.wav"); return; }
             if(args.Length>0 && args[0]=="--smoke-test") { Application.Run(new PetForm(true)); return; }

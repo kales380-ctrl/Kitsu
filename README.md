@@ -1,16 +1,16 @@
-# Kitsu · desktop Schipperke · v5
+# Kitsu · desktop Schipperke · v6
 
 [Русская инструкция](README.ru.md)
 
-Kitsu is an attentive, playful female Schipperke who lives on your Windows desktop. She has fluffy black fur, brown eyes and a pink collar, with 288 illustrated poses and genuine transparent edges.
+Kitsu is an attentive, playful female Schipperke who lives on your Windows desktop. She has fluffy black fur, brown eyes and a pink collar, with 352 illustrated poses and genuine transparent edges.
 
 ![Kitsu and her commands](docs/kitsu-preview-v4.png)
 
 ## Download and run
 
-**[Download Kitsu v5 for Windows x64](https://github.com/kales380-ctrl/Kitsu/releases/latest/download/Kitsu-windows-x64.zip)**
+**[Download Kitsu v6 for Windows x64](https://github.com/kales380-ctrl/Kitsu/releases/latest/download/Kitsu-windows-x64.zip)**
 
-Extract the ZIP and open **Kitsu.exe** on Windows 10/11 x64. Version 5 runs on .NET 10 and includes the runtime and every animation image in a self-contained executable. You do not need to install .NET or the SDK to run the downloaded package. No installer or Internet connection is needed after downloading. The current menus are in Russian.
+Extract the ZIP and open **Kitsu.exe** on Windows 10/11 x64. Version 6 runs on .NET 10 and includes the runtime and every animation image in a self-contained executable. You do not need to install .NET or the SDK to run the downloaded package. No installer or Internet connection is needed after downloading. The current menus are in Russian.
 
 The archive's SHA-256 checksum is in [downloads/SHA256SUMS.txt](downloads/SHA256SUMS.txt).
 
@@ -29,13 +29,25 @@ Give her a ball, bone or her favourite little rubber boar. She picks toys up in 
 
 The menu includes following the mouse, pause, sound, size, monitor selection and always-on-top. Close Kitsu through her menu or tray icon.
 
+## Bed and feeder
+
+![Kitsu at home and carrying toys](docs/kitsu-home-v6.png)
+
+Kitsu has a grey fabric bed with a plush cushion, and a food dispenser with a reservoir, portion outlet and metal bowl. Drag either object to move it; their positions are remembered. Clicking the bed sends Kitsu to rest there. **Place / Место** makes her approach and lie awake facing you. **Go to sleep / Иди спать** always sends her to sleep in the bed. Her spontaneous naps choose randomly between the bed and the desktop.
+
+Click the feeder, or choose **Покормить Кицу**, to dispense a portion and call Kitsu. Pellets fall from the outlet into the bowl. She approaches, lowers her muzzle, chews, lifts her head and walks away; the portion gradually disappears. Repeated clicks during that meal do not dispense another portion.
+
+Automatic meals use the computer's local time at **10:00, 17:00 and 22:00** while Kitsu is running. A pause, open menu or dragging delays the action until it can begin; clock changes and resuming Windows are checked independently of animation time. The daily history prevents repeated portions after a restart or moving the clock backwards. Starting the app later does not replay meals missed before it was opened. Manual feeding is independent of this schedule. Scheduled meals can interrupt rest or play.
+
+All three toys now have eight pickup poses and eight walking poses with the object drawn between the parted jaws. The mouth and toy belong to the same sprite, with lips occluding the grip; a toy is no longer drawn on top of the walking dog's closed muzzle.
+
 ## Desktop icons
 
 Occasional icon play is enabled initially and can be disabled in the menu. Kitsu may briefly move a desktop icon when the desktop is foreground. Returning it to its original position is enabled by default.
 
 This feature changes only Explorer's desktop icon positions. It does not open, launch, rename, delete or alter the represented files. It skips automatically arranged icons and stops if you move the selected icon yourself. No Explorer settings are changed.
 
-The app does not use the network or microphone. It does not configure automatic startup. Settings last until the app closes.
+The app does not use the network or microphone. It does not configure automatic startup. Bed and feeder positions and scheduled meal history are saved under `%LocalAppData%\Kitsu`. Other settings last until the app closes.
 
 ## Build from source
 
@@ -45,7 +57,7 @@ Install the [Windows .NET 10 SDK](https://dotnet.microsoft.com/en-us/download/do
 .\build.ps1
 ```
 
-The script publishes `artifacts\win-x64\Kitsu.exe` from `Kitsu.csproj`, targeting `net10.0-windows`. The first build restores .NET packages and needs Internet access. It embeds all 18 sprite atlases and the .NET runtime using [Microsoft's self-contained single-file deployment](https://learn.microsoft.com/en-us/dotnet/core/deploying/single-file/overview). The published executable runs without a separately installed runtime or SDK.
+The script publishes `artifacts\win-x64\Kitsu.exe` from `Kitsu.csproj`, targeting `net10.0-windows`. The first build restores .NET packages and needs Internet access. It embeds 24 artwork resources (22 dog atlases, the bed and the feeder) and the .NET runtime using [Microsoft's self-contained single-file deployment](https://learn.microsoft.com/en-us/dotnet/core/deploying/single-file/overview). The published executable runs without a separately installed runtime or SDK.
 
 ## Verification and animation sheets
 
@@ -57,7 +69,7 @@ The checks use .NET 10 and write separate test builds under `artifacts\tests`, w
 
 `Kitsu.exe --smoke-test` displays the transparent pet window for three seconds with icon play disabled. It writes `smoke-test.txt` beside the executable, or under `%LocalAppData%\Kitsu` when the application folder is read-only. Command-line failures return exit code 1 and log the error without opening a dialog.
 
-See [command and toy storyboards](docs/kitsu-commands-v4.png), [walking, running and turning sequences](docs/kitsu-sequences.png), and [asset names and exact generation prompts](assets/animations.md). Artwork was made with built-in imagegen; the character and toy details are stored in transparent PNG atlases.
+See [command and toy storyboards](docs/kitsu-commands-v4.png), [walking, running and turning sequences](docs/kitsu-sequences.png), and [asset names and exact generation prompts](assets/animations.md). See the [v6 artwork and generation prompts](assets/generation-v6.md). Artwork was made with built-in imagegen; the character and toy details are stored in transparent PNG atlases.
 
 ## Project layout
 

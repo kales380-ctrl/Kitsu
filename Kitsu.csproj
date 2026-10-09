@@ -6,7 +6,7 @@
     <EnableWindowsTargeting>true</EnableWindowsTargeting>
     <AssemblyName>Kitsu</AssemblyName>
     <RootNamespace>KitsuDesktop</RootNamespace>
-    <Version>5.0.0</Version>
+    <Version>6.0.0</Version>
     <Description>Kitsu, an animated Schipperke desktop companion</Description>
     <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
     <ImplicitUsings>disable</ImplicitUsings>
@@ -47,5 +47,11 @@
     <EmbeddedResource Include="assets\kitsu-toy-chew.png" LogicalName="Kitsu.ToyChew" />
     <EmbeddedResource Include="assets\kitsu-ball-shake.png" LogicalName="Kitsu.BallShake" />
     <EmbeddedResource Include="assets\kitsu-boar-shake.png" LogicalName="Kitsu.BoarShake" />
+    <EmbeddedResource Include="assets\kitsu-bed-v6.png" LogicalName="Kitsu.Bed" />
+    <EmbeddedResource Include="assets\kitsu-feeder-v6.png" LogicalName="Kitsu.Feeder" />
+    <EmbeddedResource Include="assets\kitsu-carry-ball-v6.png" LogicalName="Kitsu.CarryBall" />
+    <EmbeddedResource Include="assets\kitsu-carry-bone-v6.png" LogicalName="Kitsu.CarryBone" />
+    <EmbeddedResource Include="assets\kitsu-carry-boar-v6.png" LogicalName="Kitsu.CarryBoar" />
+    <EmbeddedResource Include="assets\kitsu-meals-v6.png" LogicalName="Kitsu.Meals" />
   </ItemGroup>
 </Project>

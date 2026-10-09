@@ -1,2 +1,2 @@
-0386b17fd7f04f17c2c4c496e40f17199e071b40c43480e725c35ec180550a26  Kitsu-windows-x64.zip
-5b569a237f194279f03f377cd76eee9487b3a81ebfa45f4c3fa0bb9c54f0b6e6  Kitsu.exe (inside the ZIP)
+91c068b3eed3416fdb6d91ab646a9798bdb49dd832eeb90866bb2133cde29099  Kitsu-windows-x64.zip
+179e5b7da114b78ae2059184141c2b6ad4d6a4d3cabcc214b7939ce4cff7c983  Kitsu.exe (inside the ZIP)
